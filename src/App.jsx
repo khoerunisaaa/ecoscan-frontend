@@ -4,6 +4,8 @@ import "./App.css";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 const CLASSIFY_URL = `${API_BASE_URL}/api/v1/classify`;
 const HISTORY_URL = `${API_BASE_URL}/api/v1/history`;
+const LOGIN_URL = `${API_BASE_URL}/api/v1/auth/login`;
+const REGISTER_URL = `${API_BASE_URL}/api/v1/auth/register`;
 
 const categoryMeta = {
   Organik: {
@@ -159,7 +161,19 @@ function formatRelativeTime(value) {
 }
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const storedUser = localStorage.getItem("ecoscan_user");
+    if (!storedUser) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(storedUser);
+    } catch {
+      localStorage.removeItem("ecoscan_user");
+      return null;
+    }
+  });
   const [activePage, setActivePage] = useState("home");
   const [scanMode, setScanMode] = useState("upload");
   const [selectedFile, setSelectedFile] = useState(null);
@@ -169,6 +183,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState(fallbackHistoryItems);
   const [historyError, setHistoryError] = useState("");
+  const isAuthenticated = Boolean(currentUser);
 
   const predictionTone = useMemo(() => {
     return categoryMeta[prediction?.category || prediction?.predicted_class]?.tone || "green";
@@ -179,9 +194,22 @@ function App() {
       ? Number((prediction.confidence * 100).toFixed(2))
       : 0;
 
-  const handleLogin = (event) => {
-    event.preventDefault();
-    setIsAuthenticated(true);
+  const handleAuthenticate = async ({ email, name, password, mode }) => {
+    const response = await fetch(mode === "register" ? REGISTER_URL : LOGIN_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, name, password }),
+    });
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(data?.detail || "Autentikasi gagal.");
+    }
+
+    localStorage.setItem("ecoscan_user", JSON.stringify(data.user));
+    setCurrentUser(data.user);
     setActivePage("home");
   };
 
@@ -294,13 +322,19 @@ function App() {
   }, [selectedFile]);
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onAuthenticate={handleAuthenticate} />;
   }
+
+  const handleLogout = () => {
+    localStorage.removeItem("ecoscan_user");
+    setCurrentUser(null);
+    setActivePage("home");
+  };
 
   return (
     <div className="app-shell">
       <main className="phone-stage">
-        {activePage === "home" && <HomePage onNavigate={setActivePage} />}
+        {activePage === "home" && <HomePage onNavigate={setActivePage} user={currentUser} />}
         {activePage === "history" && (
           <HistoryPage historyError={historyError} historyItems={historyItems} onRefresh={loadHistory} />
         )}
@@ -322,7 +356,7 @@ function App() {
         )}
         {activePage === "community" && <CommunityPage />}
         {activePage === "profile" && (
-          <ProfilePage historyItems={historyItems} onLogout={() => setIsAuthenticated(false)} />
+          <ProfilePage historyItems={historyItems} onLogout={handleLogout} user={currentUser} />
         )}
       </main>
 
@@ -331,43 +365,96 @@ function App() {
   );
 }
 
-function LoginPage({ onLogin }) {
+function LoginPage({ onAuthenticate }) {
+  const [mode, setMode] = useState("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isRegister = mode === "register";
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setAuthError("");
+    setIsSubmitting(true);
+
+    try {
+      await onAuthenticate({ email, name, password, mode });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Autentikasi gagal.";
+      setAuthError(message === "Failed to fetch" ? `Gagal terhubung ke ${API_BASE_URL}.` : message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const switchMode = () => {
+    setMode(isRegister ? "login" : "register");
+    setAuthError("");
+  };
+
   return (
     <main className="auth-page">
       <section className="auth-card">
         <BrandLogo />
-        <p>Ayo mulai langkah kecilmu untuk Bumi.</p>
+        <p>{isRegister ? "Buat akun EcoScan dan mulai catat aksi hijaumu." : "Ayo mulai langkah kecilmu untuk Bumi."}</p>
 
-        <form className="auth-form" onSubmit={onLogin}>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {isRegister && (
+            <label className="input-group">
+              <Icon name="user" />
+              <input
+                type="text"
+                placeholder="Nama"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+            </label>
+          )}
           <label className="input-group">
             <Icon name="mail" />
-            <input type="email" placeholder="Email" required />
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
           </label>
           <label className="input-group">
             <Icon name="lock" />
-            <input type="password" placeholder="Password" required />
-            <button type="button" aria-label="Tampilkan password">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              minLength={6}
+              required
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              onClick={() => setShowPassword((value) => !value)}
+            >
               <Icon name="eye" />
             </button>
           </label>
 
-          <button className="text-link" type="button">
-            Lupa Password?
-          </button>
-          <button className="primary-action" type="submit">
-            Masuk
+          {authError && <div className="status-card error-card auth-error">{authError}</div>}
+
+          <button className="primary-action" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Memproses..." : isRegister ? "Daftar" : "Masuk"}
           </button>
         </form>
 
-        <div className="divider">atau masuk dengan</div>
-        <button className="social-button" type="button">
-          <span className="google-mark" aria-hidden="true">
-            G
-          </span>
-          Masuk dengan Google
-        </button>
         <p className="signup-copy">
-          Belum punya akun? <button type="button">Daftar</button>
+          {isRegister ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
+          <button type="button" onClick={switchMode}>
+            {isRegister ? "Masuk" : "Daftar"}
+          </button>
         </p>
       </section>
     </main>
@@ -386,10 +473,12 @@ function BrandLogo() {
   );
 }
 
-function HomePage({ onNavigate }) {
+function HomePage({ onNavigate, user }) {
+  const firstName = user?.name?.split(" ")[0] || "Eco Warrior";
+
   return (
     <section className="page-content">
-      <TopBar title="Halo, Raka!" subtitle="Selamat datang kembali" />
+      <TopBar title={`Halo, ${firstName}!`} subtitle="Selamat datang kembali" user={user} />
 
       <section className="hero-card">
         <p>Selamat Datang di Eco Scan</p>
@@ -708,15 +797,19 @@ function CommunityLeaderboard() {
   );
 }
 
-function ProfilePage({ historyItems, onLogout }) {
+function ProfilePage({ historyItems, onLogout, user }) {
+  const displayName = user?.name || "Eco Warrior";
+  const displayEmail = user?.email || "user@ecoscan.local";
+  const initial = displayName.charAt(0).toUpperCase();
+
   return (
     <section className="page-content profile-page">
-      <TopBar title="Akun" compact />
+      <TopBar title="Akun" compact user={user} />
 
       <section className="profile-card">
-        <div className="avatar large">R</div>
-        <h1>Raka Pratama</h1>
-        <p>raka@email.com</p>
+        <div className="avatar large">{initial}</div>
+        <h1>{displayName}</h1>
+        <p>{displayEmail}</p>
         <span>Eco Warrior Level 3</span>
       </section>
 
@@ -812,7 +905,9 @@ function BottomNavigation({ activePage, onNavigate }) {
   );
 }
 
-function TopBar({ title, subtitle, compact = false }) {
+function TopBar({ title, subtitle, compact = false, user = null }) {
+  const initial = (user?.name || "E").charAt(0).toUpperCase();
+
   return (
     <header className={`top-bar ${compact ? "compact" : ""}`}>
       <div>
@@ -820,7 +915,7 @@ function TopBar({ title, subtitle, compact = false }) {
         {subtitle && <p>{subtitle}</p>}
       </div>
       <div className="top-actions">
-        <div className="avatar">R</div>
+        <div className="avatar">{initial}</div>
         <button type="button" aria-label="Notifikasi">
           <Icon name="bell" />
         </button>

@@ -189,51 +189,6 @@ button {
   opacity: 0.66;
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 20px 0 14px;
-  color: #7b8881;
-  font-size: 0.82rem;
-}
-
-.divider::before,
-.divider::after {
-  content: "";
-  height: 1px;
-  flex: 1;
-  background: #dce8df;
-}
-
-.social-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 50px;
-  border: 1px solid #d5e4dc;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #253c31;
-  cursor: pointer;
-  font-weight: 800;
-}
-
-.google-mark {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid #d5e4dc;
-  color: #1a73e8;
-  font-family: Arial, sans-serif;
-  font-size: 0.9rem;
-  font-weight: 900;
-}
-
 .signup-copy {
   margin: 20px 0 0;
   color: #52615a;
@@ -728,6 +683,11 @@ button {
   border-color: rgba(229, 72, 77, 0.28);
   background: #fff1f1;
   color: #a22228;
+}
+
+.auth-error {
+  margin-top: 0;
+  text-align: left;
 }
 
 .empty-card {
