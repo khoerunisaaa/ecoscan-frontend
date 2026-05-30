@@ -236,14 +236,14 @@ function App() {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  const handlePredict = async () => {
-    if (!selectedFile) {
+  const handlePredict = async (fileToPredict = selectedFile) => {
+    if (!fileToPredict) {
       setError("Pilih atau ambil gambar sampah terlebih dahulu.");
       return;
     }
 
     const formData = new FormData();
-    formData.append("file", selectedFile);
+    formData.append("file", fileToPredict);
 
     setIsLoading(true);
     setPrediction(null);
@@ -286,6 +286,12 @@ function App() {
     setPrediction(null);
     setError("");
   };
+
+  useEffect(() => {
+    if (selectedFile) {
+      handlePredict(selectedFile);
+    }
+  }, [selectedFile]);
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={handleLogin} />;
