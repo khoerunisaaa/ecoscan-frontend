@@ -6,6 +6,20 @@ const CLASSIFY_URL = `${API_BASE_URL}/api/v1/classify`;
 const HISTORY_URL = `${API_BASE_URL}/api/v1/history`;
 const LOGIN_URL = `${API_BASE_URL}/api/v1/auth/login`;
 const REGISTER_URL = `${API_BASE_URL}/api/v1/auth/register`;
+const COMMUNITY_CHALLENGE_URL = `${API_BASE_URL}/api/v1/community/challenge`;
+const COMMUNITY_POSTS_URL = `${API_BASE_URL}/api/v1/community/posts`;
+const COMMUNITY_LEADERBOARD_URL = `${API_BASE_URL}/api/v1/community/leaderboard`;
+const TRIVIA_URL = `${API_BASE_URL}/api/v1/trivia`;
+
+function createInitialComments(postId, items) {
+  return items.map((item, index) => ({
+    id: `${postId}-comment-${index + 1}`,
+    author: item.author,
+    body: item.body,
+    createdAt: item.createdAt || "Baru saja",
+    replies: item.replies || [],
+  }));
+}
 
 const categoryMeta = {
   Organik: {
@@ -40,14 +54,20 @@ const navItems = [
 
 const triviaCards = [
   {
+    id: "trivia-plastic",
     title: "Fakta Daur Ulang",
     text: "Botol plastik PET sebaiknya dicuci, dikeringkan, lalu disetor ke bank sampah.",
+    details:
+      "Botol PET yang bersih lebih mudah diterima bank sampah karena tidak mencemari material lain. Lepaskan label bila memungkinkan, pipihkan botol untuk menghemat ruang, lalu kumpulkan berdasarkan jenis plastik.",
     thumbnail: createSvgThumb("plastic"),
     alt: "Ilustrasi botol plastik untuk edukasi daur ulang",
   },
   {
+    id: "trivia-organic",
     title: "Sampah Organik",
     text: "Sisa sayur dan buah bisa diolah menjadi kompos untuk mengurangi sampah rumah.",
+    details:
+      "Sampah organik seperti kulit buah, sisa sayur, ampas kopi, dan daun kering bisa masuk komposter. Hindari minyak berlebih dan daging mentah agar kompos tidak berbau tajam.",
     thumbnail: createSvgThumb("organic"),
     alt: "Ilustrasi kompos dan sampah organik",
   },
@@ -77,38 +97,87 @@ const fallbackHistoryItems = [
   { name: "Kertas Kemasan", category: "Kertas", confidence: 88, time: "2 hari lalu" },
 ];
 
-const posts = [
+const weeklyChallenge = {
+  id: "weekly-plastic-10",
+  title: "Scan 10 sampah plastik",
+  description: "Kumpulkan scan plastik bersih minggu ini dan bagikan tips pemilahanmu.",
+  current: 6,
+  target: 10,
+  reward: 80,
+  endsAt: "Minggu ini",
+};
+
+const communityPosts = [
   {
+    id: "post-kitchen-waste",
     author: "Nadia",
     badge: "Eco Mentor",
     title: "Tips memilah sampah dapur",
     body: "Pisahkan kulit buah dan sisa sayur sejak awal. Wadah kecil di dekat meja masak bikin kebiasaan ini lebih gampang.",
-    stat: "128 suka",
+    type: "post",
+    likes: 128,
+    isLiked: false,
+    comments: createInitialComments("post-kitchen-waste", [
+      { author: "Sari", body: "Aku pakai wadah bekas es krim, ternyata praktis banget." },
+      { author: "Raka", body: "Tipsnya membantu buat mulai kompos di rumah." },
+    ]),
+    createdAt: "Hari ini",
   },
   {
+    id: "post-plastic-schedule",
     author: "Bima",
     badge: "Bank Sampah",
     title: "Jadwal setor plastik minggu ini",
     body: "Cuci dan keringkan botol plastik sebelum disetor supaya nilainya lebih tinggi.",
-    stat: "34 komentar",
+    type: "post",
+    likes: 87,
+    isLiked: false,
+    comments: createInitialComments("post-plastic-schedule", [
+      { author: "Nadia", body: "Bank sampah dekat rumahku juga minta botol dipipihkan." },
+    ]),
+    createdAt: "Kemarin",
   },
 ];
 
 const communityTips = [
   {
+    id: "tip-three-bins",
     title: "Mulai dari 3 kategori",
-    text: "Untuk pemula, pisahkan organik, anorganik, dan residu lebih dulu agar rutinitasnya mudah dijaga.",
+    body: "Untuk pemula, pisahkan organik, anorganik, dan residu lebih dulu agar rutinitasnya mudah dijaga.",
     tag: "Pemilahan",
+    author: "EcoScan",
+    badge: "Panduan",
+    type: "tip",
+    likes: 42,
+    isLiked: false,
+    comments: [],
+    createdAt: "Minggu ini",
   },
   {
+    id: "tip-dry-plastic",
     title: "Keringkan plastik sebelum disetor",
-    text: "Kemasan yang kering dan bersih memiliki nilai jual lebih baik di bank sampah.",
+    body: "Kemasan yang kering dan bersih memiliki nilai jual lebih baik di bank sampah.",
     tag: "Daur ulang",
+    author: "EcoScan",
+    badge: "Panduan",
+    type: "tip",
+    likes: 35,
+    isLiked: false,
+    comments: [],
+    createdAt: "Minggu ini",
   },
   {
+    id: "tip-b3",
     title: "Simpan limbah B3 terpisah",
-    text: "Baterai, lampu, dan obat kedaluwarsa jangan dicampur dengan sampah rumah tangga.",
+    body: "Baterai, lampu, dan obat kedaluwarsa jangan dicampur dengan sampah rumah tangga.",
     tag: "Keamanan",
+    author: "EcoScan",
+    badge: "Panduan",
+    type: "tip",
+    likes: 51,
+    isLiked: false,
+    comments: [],
+    createdAt: "Minggu ini",
   },
 ];
 
@@ -133,6 +202,57 @@ function mapHistoryItem(item) {
     category: item.category || item.predicted_class || "Anorganik",
     confidence,
     time: formatRelativeTime(item.created_at),
+  };
+}
+
+function normalizePost(item) {
+  return {
+    id: item.id || `post-${Date.now()}`,
+    author: item.author || "Eco Warrior",
+    badge: item.badge || "Anggota",
+    title: item.title || "Postingan komunitas",
+    body: item.body || item.text || "",
+    tag: item.tag || "",
+    type: item.type || "post",
+    likes: Number(item.likes || 0),
+    isLiked: Boolean(item.isLiked || item.is_liked),
+    comments: Array.isArray(item.comments)
+      ? item.comments.map((comment, index) => ({
+          id: comment.id || `${item.id}-comment-${index}`,
+          author: comment.author || "Anggota",
+          body: comment.body || "",
+          createdAt: comment.createdAt || comment.created_at || "Baru saja",
+          replies: comment.replies || [],
+        }))
+      : [],
+    createdAt: item.createdAt || item.created_at || "Baru saja",
+  };
+}
+
+function normalizeChallenge(item) {
+  if (!item) {
+    return weeklyChallenge;
+  }
+
+  return {
+    id: item.id || weeklyChallenge.id,
+    title: item.title || weeklyChallenge.title,
+    description: item.description || weeklyChallenge.description,
+    current: Number(item.current || item.current_progress || 0),
+    target: Number(item.target || item.target_progress || weeklyChallenge.target),
+    reward: Number(item.reward || item.reward_points || weeklyChallenge.reward),
+    endsAt: item.endsAt || item.ends_at || weeklyChallenge.endsAt,
+  };
+}
+
+function normalizeTrivia(item) {
+  return {
+    id: item.id || item.title,
+    title: item.title,
+    text: item.text || item.summary || "",
+    details: item.details || item.body || item.text || "",
+    thumbnail: item.thumbnail || createSvgThumb(item.type || "organic"),
+    alt: item.alt || `Ilustrasi ${item.title}`,
   };
 }
 
@@ -183,6 +303,22 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState(fallbackHistoryItems);
   const [historyError, setHistoryError] = useState("");
+  const [challenge, setChallenge] = useState(weeklyChallenge);
+  const [communityItems, setCommunityItems] = useState(() => [
+    ...communityPosts.map(normalizePost),
+    ...communityTips.map(normalizePost),
+  ]);
+  const [leaderboard, setLeaderboard] = useState(leaderboardItems);
+  const [triviaItems, setTriviaItems] = useState(triviaCards);
+  const [notifications, setNotifications] = useState([
+    "Nadia membalas komentar kamu di Tips memilah sampah dapur.",
+    "Tantangan mingguan sudah 60% selesai.",
+    "Kamu mendapat 20 poin dari scan terbaru.",
+  ]);
+  const [language, setLanguage] = useState(() => localStorage.getItem("ecoscan_language") || "id");
+  const [isLightTheme, setIsLightTheme] = useState(() => {
+    return localStorage.getItem("ecoscan_theme") !== "dark";
+  });
   const isAuthenticated = Boolean(currentUser);
 
   const predictionTone = useMemo(() => {
@@ -231,11 +367,66 @@ function App() {
     }
   };
 
+  const loadCommunityData = async () => {
+    try {
+      const [challengeResponse, postsResponse, leaderboardResponse] = await Promise.all([
+        fetch(COMMUNITY_CHALLENGE_URL),
+        fetch(COMMUNITY_POSTS_URL),
+        fetch(COMMUNITY_LEADERBOARD_URL),
+      ]);
+
+      if (challengeResponse.ok) {
+        const data = await challengeResponse.json();
+        setChallenge(normalizeChallenge(data.challenge));
+      }
+
+      if (postsResponse.ok) {
+        const data = await postsResponse.json();
+        const items = Array.isArray(data.items) ? data.items.map(normalizePost) : [];
+        if (items.length) {
+          setCommunityItems(items);
+        }
+      }
+
+      if (leaderboardResponse.ok) {
+        const data = await leaderboardResponse.json();
+        if (Array.isArray(data.items) && data.items.length) {
+          setLeaderboard(data.items);
+        }
+      }
+    } catch {
+      setCommunityItems((items) => (items.length ? items : [...communityPosts, ...communityTips].map(normalizePost)));
+    }
+  };
+
+  const loadTrivia = async () => {
+    try {
+      const response = await fetch(TRIVIA_URL);
+      const data = await response.json().catch(() => null);
+
+      if (response.ok && Array.isArray(data?.items) && data.items.length) {
+        setTriviaItems(data.items.map(normalizeTrivia));
+      }
+    } catch {
+      setTriviaItems(triviaCards);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       loadHistory();
+      loadCommunityData();
+      loadTrivia();
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    localStorage.setItem("ecoscan_language", language);
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem("ecoscan_theme", isLightTheme ? "light" : "dark");
+  }, [isLightTheme]);
 
   const handleImageChange = (event) => {
     const file = event.target.files?.[0];
@@ -331,10 +522,130 @@ function App() {
     setActivePage("home");
   };
 
+  const handleUpdateUser = async (updates) => {
+    const updatedUser = { ...currentUser, ...updates };
+    setCurrentUser(updatedUser);
+    localStorage.setItem("ecoscan_user", JSON.stringify(updatedUser));
+
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/users/${currentUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+    } catch {
+      // Data tetap tersimpan lokal saat backend profil belum tersambung.
+    }
+  };
+
+  const handleCreatePost = async ({ title, body }) => {
+    const newPost = normalizePost({
+      id: `local-post-${Date.now()}`,
+      author: currentUser?.name || "Eco Warrior",
+      badge: "Anggota",
+      title,
+      body,
+      type: "post",
+      likes: 0,
+      comments: [],
+      createdAt: "Baru saja",
+    });
+
+    setCommunityItems((items) => [newPost, ...items]);
+
+    try {
+      const response = await fetch(COMMUNITY_POSTS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          body,
+          author: newPost.author,
+          badge: newPost.badge,
+          user_id: currentUser?.id,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.item) {
+        const savedPost = normalizePost(data.item);
+        setCommunityItems((items) => items.map((item) => (item.id === newPost.id ? savedPost : item)));
+      }
+    } catch {
+      // Optimistic UI: postingan lokal tetap tampil.
+    }
+  };
+
+  const handleToggleLike = async (postId) => {
+    const target = communityItems.find((item) => item.id === postId);
+    const nextLiked = !target?.isLiked;
+
+    setCommunityItems((items) =>
+      items.map((item) =>
+        item.id === postId
+          ? { ...item, isLiked: !item.isLiked, likes: Math.max(0, item.likes + (item.isLiked ? -1 : 1)) }
+          : item
+      )
+    );
+
+    try {
+      await fetch(`${COMMUNITY_POSTS_URL}/${postId}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ liked: nextLiked }),
+      });
+    } catch {
+      // Like akan disinkronkan ulang saat data komunitas dimuat dari backend.
+    }
+  };
+
+  const handleAddComment = async (postId, body, parentId = null) => {
+    const newComment = {
+      id: `local-comment-${Date.now()}`,
+      author: currentUser?.name || "Eco Warrior",
+      body,
+      createdAt: "Baru saja",
+      replies: [],
+    };
+
+    setCommunityItems((items) =>
+      items.map((item) => {
+        if (item.id !== postId) return item;
+        if (!parentId) return { ...item, comments: [...item.comments, newComment] };
+
+        return {
+          ...item,
+          comments: item.comments.map((comment) =>
+            comment.id === parentId
+              ? { ...comment, replies: [...(comment.replies || []), newComment] }
+              : comment
+          ),
+        };
+      })
+    );
+
+    try {
+      const response = await fetch(`${COMMUNITY_POSTS_URL}/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body,
+          author: newComment.author,
+          parent_id: parentId,
+          user_id: currentUser?.id,
+        }),
+      });
+      if (response.ok) {
+        loadCommunityData();
+      }
+    } catch {
+      // Komentar lokal tetap digunakan jika backend belum tersedia.
+    }
+  };
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isLightTheme ? "light-theme" : "dark-theme"}`}>
       <main className="phone-stage">
-        {activePage === "home" && <HomePage onNavigate={setActivePage} user={currentUser} />}
+        {activePage === "home" && <HomePage onNavigate={setActivePage} triviaItems={triviaItems} user={currentUser} />}
         {activePage === "history" && (
           <HistoryPage historyError={historyError} historyItems={historyItems} onRefresh={loadHistory} />
         )}
@@ -354,9 +665,28 @@ function App() {
             setScanMode={setScanMode}
           />
         )}
-        {activePage === "community" && <CommunityPage />}
+        {activePage === "community" && (
+          <CommunityPage
+            challenge={challenge}
+            items={communityItems}
+            leaderboard={leaderboard}
+            onAddComment={handleAddComment}
+            onCreatePost={handleCreatePost}
+            onToggleLike={handleToggleLike}
+          />
+        )}
         {activePage === "profile" && (
-          <ProfilePage historyItems={historyItems} onLogout={handleLogout} user={currentUser} />
+          <ProfilePage
+            historyItems={historyItems}
+            isLightTheme={isLightTheme}
+            language={language}
+            notifications={notifications}
+            onLanguageChange={setLanguage}
+            onLogout={handleLogout}
+            onThemeToggle={setIsLightTheme}
+            onUpdateUser={handleUpdateUser}
+            user={currentUser}
+          />
         )}
       </main>
 
@@ -473,8 +803,9 @@ function BrandLogo() {
   );
 }
 
-function HomePage({ onNavigate, user }) {
+function HomePage({ onNavigate, triviaItems, user }) {
   const firstName = user?.name?.split(" ")[0] || "Eco Warrior";
+  const [selectedTrivia, setSelectedTrivia] = useState(null);
 
   return (
     <section className="page-content">
@@ -510,14 +841,14 @@ function HomePage({ onNavigate, user }) {
           <h2>Eco Trivia</h2>
         </div>
         <div className="trivia-grid">
-          {triviaCards.map((card) => (
-            <article className="trivia-card" key={card.title}>
+          {triviaItems.map((card) => (
+            <button className="trivia-card" key={card.id || card.title} type="button" onClick={() => setSelectedTrivia(card)}>
               <img className="trivia-thumb" src={card.thumbnail} alt={card.alt} />
               <div>
                 <span>{card.title}</span>
                 <strong>{card.text}</strong>
               </div>
-            </article>
+            </button>
           ))}
         </div>
       </section>
@@ -535,6 +866,13 @@ function HomePage({ onNavigate, user }) {
           </article>
         ))}
       </section>
+
+      {selectedTrivia && (
+        <Modal title={selectedTrivia.title} onClose={() => setSelectedTrivia(null)}>
+          <img className="modal-media" src={selectedTrivia.thumbnail} alt={selectedTrivia.alt} />
+          <p className="modal-copy">{selectedTrivia.details}</p>
+        </Modal>
+      )}
     </section>
   );
 }
@@ -690,14 +1028,34 @@ function ScanPage({
   );
 }
 
-function CommunityPage() {
+function CommunityPage({ challenge, items, leaderboard, onAddComment, onCreatePost, onToggleLike }) {
   const [activeTab, setActiveTab] = useState("feed");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPost, setSelectedPost] = useState(null);
+  const selectedPostData = selectedPost ? items.find((item) => item.id === selectedPost.id) || selectedPost : null;
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredItems = items.filter((item) => {
+    if (!normalizedSearch) return true;
+    return [item.title, item.body, item.author, item.tag, item.badge]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(normalizedSearch));
+  });
+  const feedItems = filteredItems.filter((item) => item.type !== "tip");
+  const tipItems = filteredItems.filter((item) => item.type === "tip");
 
   return (
     <section className="page-content">
       <TopBar title="Komunitas" subtitle="Belajar dan bergerak bersama" />
 
-      <div className="search-box">Cari tips, pengguna, atau topik...</div>
+      <label className="search-box">
+        <Icon name="search" />
+        <input
+          type="search"
+          placeholder="Cari tips, pengguna, atau topik..."
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+        />
+      </label>
 
       <div className="tabs">
         <button
@@ -723,68 +1081,140 @@ function CommunityPage() {
         </button>
       </div>
 
-      {activeTab === "feed" && <CommunityFeed />}
-      {activeTab === "tips" && <CommunityTips />}
-      {activeTab === "leaderboard" && <CommunityLeaderboard />}
+      {activeTab === "feed" && (
+        <CommunityFeed
+          challenge={challenge}
+          items={feedItems}
+          onCreatePost={onCreatePost}
+          onOpenPost={setSelectedPost}
+          onToggleLike={onToggleLike}
+        />
+      )}
+      {activeTab === "tips" && (
+        <CommunityTips items={tipItems} onOpenPost={setSelectedPost} onToggleLike={onToggleLike} />
+      )}
+      {activeTab === "leaderboard" && <CommunityLeaderboard items={leaderboard} />}
+
+      {selectedPostData && (
+        <PostDetailModal
+          onAddComment={onAddComment}
+          onClose={() => setSelectedPost(null)}
+          onToggleLike={onToggleLike}
+          post={selectedPostData}
+        />
+      )}
     </section>
   );
 }
 
-function CommunityFeed() {
+function CommunityFeed({ challenge, items, onCreatePost, onOpenPost, onToggleLike }) {
+  const progress = challenge.target > 0 ? Math.min(100, Math.round((challenge.current / challenge.target) * 100)) : 0;
+
   return (
     <>
       <section className="challenge-card">
         <span>Tantangan Minggu Ini</span>
-        <h2>Scan 10 sampah plastik</h2>
+        <h2>{challenge.title}</h2>
+        <p>{challenge.description}</p>
         <div className="confidence-track">
-          <span style={{ width: "60%" }} />
+          <span style={{ width: `${progress}%` }} />
         </div>
-        <p>6/10 scan selesai</p>
+        <p>
+          {challenge.current}/{challenge.target} selesai · {challenge.reward} poin · {challenge.endsAt}
+        </p>
       </section>
 
+      <CreatePostForm onCreatePost={onCreatePost} />
+
       <section className="post-list">
-        {posts.map((post) => (
-          <article className="post-card" key={post.title}>
-            <div className="post-author">
-              <div className="avatar small">{post.author[0]}</div>
-              <div>
-                <strong>{post.author}</strong>
-                <span>{post.badge}</span>
-              </div>
-            </div>
-            <h3>{post.title}</h3>
-            <p>{post.body}</p>
-            <div className="post-actions">
-              <span>{post.stat}</span>
-              <button type="button">Simpan</button>
-            </div>
-          </article>
+        {items.length === 0 && <div className="status-card empty-card">Belum ada postingan yang cocok.</div>}
+        {items.map((post) => (
+          <PostCard key={post.id} onOpenPost={onOpenPost} onToggleLike={onToggleLike} post={post} />
         ))}
       </section>
     </>
   );
 }
 
-function CommunityTips() {
+function CreatePostForm({ onCreatePost }) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!title.trim() || !body.trim()) return;
+    onCreatePost({ title: title.trim(), body: body.trim() });
+    setTitle("");
+    setBody("");
+  };
+
+  return (
+    <form className="create-post-form" onSubmit={handleSubmit}>
+      <input
+        type="text"
+        placeholder="Judul tips atau cerita"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+      <textarea
+        placeholder="Bagikan pengalaman, tips, atau info komunitas..."
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        rows="3"
+      />
+      <button className="primary-action" type="submit">
+        Buat Post
+      </button>
+    </form>
+  );
+}
+
+function PostCard({ post, onOpenPost, onToggleLike }) {
+  return (
+    <article className="post-card">
+      <button className="post-main" type="button" onClick={() => onOpenPost(post)}>
+        <div className="post-author">
+          <div className="avatar small">{post.author[0]}</div>
+          <div>
+            <strong>{post.author}</strong>
+            <span>
+              {post.badge} · {post.createdAt}
+            </span>
+          </div>
+        </div>
+        {post.tag && <span className="tip-tag">{post.tag}</span>}
+        <h3>{post.title}</h3>
+        <p>{post.body}</p>
+      </button>
+      <div className="post-actions">
+        <span>
+          {post.likes} suka · {post.comments.length} komentar
+        </span>
+        <button type="button" onClick={() => onToggleLike(post.id)}>
+          {post.isLiked ? "Disukai" : "Like"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function CommunityTips({ items, onOpenPost, onToggleLike }) {
   return (
     <section className="tips-list">
-      {communityTips.map((tip) => (
-        <article className="tip-card" key={tip.title}>
-          <span>{tip.tag}</span>
-          <h3>{tip.title}</h3>
-          <p>{tip.text}</p>
-        </article>
+      {items.length === 0 && <div className="status-card empty-card">Tips tidak ditemukan.</div>}
+      {items.map((tip) => (
+        <PostCard key={tip.id} onOpenPost={onOpenPost} onToggleLike={onToggleLike} post={tip} />
       ))}
     </section>
   );
 }
 
-function CommunityLeaderboard() {
+function CommunityLeaderboard({ items }) {
   return (
     <section className="leaderboard-list">
-      {leaderboardItems.map((item) => (
+      {items.map((item, index) => (
         <article className="leaderboard-item" key={item.name}>
-          <strong className="rank-number">{item.rank}</strong>
+          <strong className="rank-number">{item.rank || index + 1}</strong>
           <div className="avatar small">{item.name[0]}</div>
           <div>
             <h3>{item.name}</h3>
@@ -797,10 +1227,112 @@ function CommunityLeaderboard() {
   );
 }
 
-function ProfilePage({ historyItems, onLogout, user }) {
+function PostDetailModal({ post, onAddComment, onClose, onToggleLike }) {
+  const [commentBody, setCommentBody] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!commentBody.trim()) return;
+    onAddComment(post.id, commentBody.trim(), replyTo);
+    setCommentBody("");
+    setReplyTo(null);
+  };
+
+  return (
+    <Modal title={post.title} onClose={onClose}>
+      <div className="post-author modal-author">
+        <div className="avatar small">{post.author[0]}</div>
+        <div>
+          <strong>{post.author}</strong>
+          <span>
+            {post.badge} · {post.createdAt}
+          </span>
+        </div>
+      </div>
+      <p className="modal-copy">{post.body}</p>
+      <div className="detail-actions">
+        <button type="button" onClick={() => onToggleLike(post.id)}>
+          {post.isLiked ? "Disukai" : "Like"} · {post.likes}
+        </button>
+        <span>{post.comments.length} komentar</span>
+      </div>
+
+      <section className="comment-section">
+        <h3>Komentar</h3>
+        <CommentList comments={post.comments} onReply={setReplyTo} />
+        <form className="comment-form" onSubmit={handleSubmit}>
+          {replyTo && (
+            <button className="reply-context" type="button" onClick={() => setReplyTo(null)}>
+              Batalkan balasan
+            </button>
+          )}
+          <textarea
+            placeholder={replyTo ? "Tulis balasan..." : "Tulis komentar..."}
+            value={commentBody}
+            onChange={(event) => setCommentBody(event.target.value)}
+            rows="3"
+          />
+          <button className="primary-action" type="submit">
+            Kirim
+          </button>
+        </form>
+      </section>
+    </Modal>
+  );
+}
+
+function CommentList({ comments, onReply }) {
+  if (!comments.length) {
+    return <p className="empty-copy">Belum ada komentar.</p>;
+  }
+
+  return (
+    <div className="comment-list">
+      {comments.map((comment) => (
+        <article className="comment-item" key={comment.id}>
+          <div>
+            <strong>{comment.author}</strong>
+            <span>{comment.createdAt}</span>
+          </div>
+          <p>{comment.body}</p>
+          <button type="button" onClick={() => onReply(comment.id)}>
+            Balas
+          </button>
+          {(comment.replies || []).length > 0 && (
+            <div className="reply-list">
+              {comment.replies.map((reply) => (
+                <article className="comment-item" key={reply.id}>
+                  <div>
+                    <strong>{reply.author}</strong>
+                    <span>{reply.createdAt}</span>
+                  </div>
+                  <p>{reply.body}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ProfilePage({
+  historyItems,
+  isLightTheme,
+  language,
+  notifications,
+  onLanguageChange,
+  onLogout,
+  onThemeToggle,
+  onUpdateUser,
+  user,
+}) {
   const displayName = user?.name || "Eco Warrior";
   const displayEmail = user?.email || "user@ecoscan.local";
   const initial = displayName.charAt(0).toUpperCase();
+  const [activePanel, setActivePanel] = useState(null);
 
   return (
     <section className="page-content profile-page">
@@ -827,19 +1359,116 @@ function ProfilePage({ historyItems, onLogout, user }) {
       </section>
 
       <section className="settings-list">
-        {["Edit Profile", "Notifikasi", "Bahasa Indonesia", "Tema Light", "Bantuan"].map(
-          (item) => (
-            <button type="button" key={item}>
-              <span>{item}</span>
-              <strong>&gt;</strong>
-            </button>
-          )
-        )}
+        <button type="button" onClick={() => setActivePanel("edit")}>
+          <span>Edit Profil</span>
+          <strong>&gt;</strong>
+        </button>
+        <button type="button" onClick={() => setActivePanel("notifications")}>
+          <span>Notifikasi</span>
+          <strong>{notifications.length}</strong>
+        </button>
+        <button type="button" onClick={() => setActivePanel("language")}>
+          <span>Bahasa Indonesia</span>
+          <strong>{language === "id" ? "Aktif" : "Pilih"}</strong>
+        </button>
+        <button type="button" onClick={() => onThemeToggle((value) => !value)}>
+          <span>Tema Light</span>
+          <strong>{isLightTheme ? "On" : "Off"}</strong>
+        </button>
+        <button type="button" onClick={() => setActivePanel("help")}>
+          <span>Bantuan</span>
+          <strong>&gt;</strong>
+        </button>
         <button className="logout-button" type="button" onClick={onLogout}>
           Logout
         </button>
       </section>
+
+      {activePanel === "edit" && (
+        <EditProfileModal
+          onClose={() => setActivePanel(null)}
+          onSubmit={(updates) => {
+            onUpdateUser(updates);
+            setActivePanel(null);
+          }}
+          user={user}
+        />
+      )}
+      {activePanel === "notifications" && (
+        <Modal title="Notifikasi" onClose={() => setActivePanel(null)}>
+          <div className="notification-list">
+            {notifications.map((item) => (
+              <article className="notification-item" key={item}>
+                <Icon name="bell" />
+                <p>{item}</p>
+              </article>
+            ))}
+          </div>
+        </Modal>
+      )}
+      {activePanel === "language" && (
+        <Modal title="Bahasa" onClose={() => setActivePanel(null)}>
+          <div className="option-list">
+            <button
+              className={language === "id" ? "active" : ""}
+              type="button"
+              onClick={() => {
+                onLanguageChange("id");
+                setActivePanel(null);
+              }}
+            >
+              Bahasa Indonesia
+            </button>
+          </div>
+        </Modal>
+      )}
+      {activePanel === "help" && (
+        <Modal title="Pusat Bantuan" onClose={() => setActivePanel(null)}>
+          <div className="faq-list">
+            <article>
+              <h3>Bagaimana cara scan sampah?</h3>
+              <p>Buka menu Scan, unggah gambar atau ambil foto, lalu tunggu hasil klasifikasi AI.</p>
+            </article>
+            <article>
+              <h3>Kenapa hasil scan tidak tersimpan?</h3>
+              <p>Pastikan backend FastAPI aktif dan konfigurasi Supabase sudah benar.</p>
+            </article>
+            <article>
+              <h3>Kontak bantuan</h3>
+              <p>Kirim laporan ke support@ecoscan.local dengan screenshot masalah yang kamu temui.</p>
+            </article>
+          </div>
+        </Modal>
+      )}
     </section>
+  );
+}
+
+function EditProfileModal({ onClose, onSubmit, user }) {
+  const [name, setName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit({ name: name.trim(), email: email.trim() });
+  };
+
+  return (
+    <Modal title="Edit Profil" onClose={onClose}>
+      <form className="profile-form" onSubmit={handleSubmit}>
+        <label>
+          Nama
+          <input type="text" value={name} onChange={(event) => setName(event.target.value)} required />
+        </label>
+        <label>
+          Email
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        </label>
+        <button className="primary-action" type="submit">
+          Simpan
+        </button>
+      </form>
+    </Modal>
   );
 }
 
@@ -881,6 +1510,28 @@ function HistoryList({ items }) {
           </div>
         </article>
       ))}
+    </div>
+  );
+}
+
+function Modal({ children, onClose, title }) {
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="modal-header">
+          <h2>{title}</h2>
+          <button type="button" aria-label="Tutup" onClick={onClose}>
+            <Icon name="x" />
+          </button>
+        </header>
+        {children}
+      </section>
     </div>
   );
 }
@@ -1031,6 +1682,20 @@ function Icon({ name }) {
         <svg {...common}>
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
           <path d="M10 21h4" />
+        </svg>
+      );
+    case "search":
+      return (
+        <svg {...common}>
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      );
+    case "x":
+      return (
+        <svg {...common}>
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
         </svg>
       );
     case "mail":

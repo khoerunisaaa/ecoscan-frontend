@@ -22,7 +22,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -201,6 +202,24 @@ button {
   margin: 0 auto;
   background: #fff8ec;
   box-shadow: 0 0 70px rgba(11, 107, 67, 0.14);
+}
+
+.app-shell.dark-theme {
+  background: #17201b;
+}
+
+.app-shell.dark-theme .phone-stage {
+  background: linear-gradient(180deg, #17201b 0%, #22382c 100%);
+}
+
+.app-shell.dark-theme .top-bar h1,
+.app-shell.dark-theme .section-title h2 {
+  color: #f8fff9;
+}
+
+.app-shell.dark-theme .top-bar p,
+.app-shell.dark-theme .scan-helper {
+  color: #c5d4ca;
 }
 
 .phone-stage {
@@ -407,11 +426,16 @@ button {
 }
 
 .trivia-card {
+  display: block;
+  width: 100%;
   overflow: hidden;
   border: 1px solid rgba(11, 107, 67, 0.1);
   border-radius: 24px;
   background: #ffffff;
   box-shadow: 0 14px 34px rgba(44, 77, 59, 0.12);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
 .trivia-thumb {
@@ -817,6 +841,7 @@ button {
 .search-box {
   display: flex;
   align-items: center;
+  gap: 10px;
   min-height: 50px;
   margin-bottom: 14px;
   padding: 0 18px;
@@ -825,6 +850,15 @@ button {
   background: #ffffff;
   color: #819089;
   font-size: 0.9rem;
+}
+
+.search-box input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #17201b;
 }
 
 .challenge-card {
@@ -850,6 +884,7 @@ button {
   margin: 10px 0 0;
   color: #5a6861;
   font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .post-list,
@@ -857,6 +892,48 @@ button {
 .leaderboard-list {
   display: grid;
   gap: 14px;
+}
+
+.create-post-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid rgba(11, 107, 67, 0.1);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 34px rgba(11, 107, 67, 0.08);
+}
+
+.create-post-form input,
+.create-post-form textarea,
+.comment-form textarea,
+.profile-form input {
+  width: 100%;
+  border: 1px solid #dce8df;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #17201b;
+  outline: 0;
+}
+
+.create-post-form input,
+.profile-form input {
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.create-post-form textarea,
+.comment-form textarea {
+  min-height: 86px;
+  resize: vertical;
+  padding: 12px 14px;
+}
+
+.create-post-form .primary-action,
+.comment-form .primary-action,
+.profile-form .primary-action {
+  min-height: 44px;
 }
 
 .tips-list,
@@ -867,6 +944,31 @@ button {
 .post-card,
 .tip-card {
   padding: 16px;
+}
+
+.post-card {
+  display: grid;
+  gap: 12px;
+}
+
+.post-main {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tip-tag {
+  justify-self: start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e8f7ef;
+  color: #0b6b43;
+  font-size: 0.74rem;
+  font-weight: 900;
 }
 
 .tip-card {
@@ -961,15 +1063,19 @@ button {
 }
 
 .post-card h3 {
-  margin: 14px 0 8px;
+  margin: 4px 0 0;
   font-size: 1rem;
 }
 
 .post-card p {
-  margin: 0 0 14px;
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
   color: #52615a;
   font-size: 0.9rem;
   line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .post-actions {
@@ -1095,6 +1201,197 @@ button {
 .settings-list .logout-button {
   justify-content: center;
   color: #e5484d;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end center;
+  padding: 18px;
+  background: rgba(23, 32, 27, 0.42);
+}
+
+.modal-panel {
+  width: min(100%, 426px);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  padding: 18px;
+  border-radius: 26px;
+  background: #fffaf1;
+  box-shadow: 0 24px 80px rgba(23, 32, 27, 0.28);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #17201b;
+  font-size: 1.08rem;
+}
+
+.modal-header button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #17201b;
+  cursor: pointer;
+}
+
+.modal-media {
+  width: 100%;
+  aspect-ratio: 1.6;
+  object-fit: cover;
+  border-radius: 18px;
+}
+
+.modal-copy {
+  margin: 12px 0 0;
+  color: #3f5048;
+  font-size: 0.93rem;
+  line-height: 1.55;
+}
+
+.modal-author {
+  margin-bottom: 12px;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+  color: #52615a;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.detail-actions button,
+.comment-item button,
+.reply-context {
+  background: transparent;
+  color: #0b7c4e;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.comment-section h3 {
+  margin: 0 0 12px;
+  font-size: 0.96rem;
+}
+
+.comment-list,
+.comment-form,
+.notification-list,
+.faq-list,
+.option-list,
+.profile-form {
+  display: grid;
+  gap: 12px;
+}
+
+.comment-item {
+  padding: 12px;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.comment-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.comment-item strong {
+  font-size: 0.86rem;
+}
+
+.comment-item span,
+.empty-copy {
+  color: #6b756f;
+  font-size: 0.78rem;
+}
+
+.comment-item p {
+  margin: 8px 0;
+  color: #3f5048;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.reply-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 12px;
+  border-left: 3px solid #e8f7ef;
+}
+
+.comment-form {
+  margin-top: 14px;
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.notification-item p,
+.faq-list p {
+  margin: 0;
+  color: #3f5048;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.faq-list article {
+  padding: 12px;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.faq-list h3 {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+}
+
+.option-list button {
+  min-height: 48px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #17201b;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.option-list .active {
+  background: #0b6b43;
+  color: #ffffff;
+}
+
+.profile-form label {
+  display: grid;
+  gap: 7px;
+  color: #52615a;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
 .bottom-nav {
