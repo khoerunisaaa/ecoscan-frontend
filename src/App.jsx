@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight, SwitchCamera } from "lucide-react";
+
 import "./App.css";
+
+
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 const CLASSIFY_URL = `${API_BASE_URL}/api/v1/classify`;
@@ -10,6 +14,255 @@ const COMMUNITY_CHALLENGE_URL = `${API_BASE_URL}/api/v1/community/challenge`;
 const COMMUNITY_POSTS_URL = `${API_BASE_URL}/api/v1/community/posts`;
 const COMMUNITY_LEADERBOARD_URL = `${API_BASE_URL}/api/v1/community/leaderboard`;
 const TRIVIA_URL = `${API_BASE_URL}/api/v1/trivia`;
+const USER_URL = `${API_BASE_URL}/api/v1/users`;
+const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
+const HISTORY_PAGE_SIZE = 5;
+
+const textTranslations = {
+  "Beranda": "Home",
+  "Riwayat": "History",
+  "Scan": "Scan",
+  "Komunitas": "Community",
+  "Akun": "Account",
+  "Selamat datang kembali": "Welcome back",
+  "Selamat Datang di Eco Scan": "Welcome to Eco Scan",
+  "Scan Minggu Ini": "Scans This Week",
+  "Poin Eco": "Eco Points",
+  "Hari Streak": "Day Streak",
+  "Mulai Scan Sampah": "Start Waste Scan",
+  "Aksi Cepat": "Quick Actions",
+  "Eco Trivia": "Eco Trivia",
+  "Panduan edukasi sampah": "Waste education guide",
+  "Pindai Sampah": "Scan Waste",
+  "Scan Sampah": "Waste Scan",
+  "Hasil Scan": "Scan Result",
+  "Kamera": "Camera",
+  "Upload": "Upload",
+  "Arahkan kamera ke sampah, lalu tekan tombol scan.": "Point the camera at waste, then press scan.",
+  "Unggah gambar sampah dari galeri untuk mulai scan.": "Upload a waste photo from your gallery to start scanning.",
+  "Pilih gambar sampah dari galeri.": "Choose a waste image from your gallery.",
+  "Ambil foto sampah langsung dari kamera.": "Capture waste directly from the camera.",
+  "Hasil Klasifikasi": "Classification Result",
+  "Jenis Sampah": "Waste Type",
+  "Akurasi": "Accuracy",
+  "Label Model": "Model Label",
+  "Status": "Status",
+  "Cara Pengolahan": "Handling Guide",
+  "Langkah Pengolahan": "Processing Steps",
+  "Tersimpan di Riwayat": "Saved to History",
+  "Scan Ulang": "Scan Again",
+  "Aktivitas scan terbaru": "Latest scan activity",
+  "Belum ada riwayat scan.": "No scan history yet.",
+  "Muat ulang": "Refresh",
+  "Belajar dan bergerak bersama": "Learn and act together",
+  "Feed": "Feed",
+  "Tips": "Tips",
+  "Leaderboard": "Leaderboard",
+  "Tantangan Minggu Ini": "This Week's Challenge",
+  "Buat Post": "Create Post",
+  "Belum ada postingan yang cocok.": "No matching posts yet.",
+  "Tips tidak ditemukan.": "No tips found.",
+  "suka": "likes",
+  "komentar": "comments",
+  "Disukai": "Liked",
+  "Like": "Like",
+  "Komentar": "Comments",
+  "Belum ada komentar.": "No comments yet.",
+  "Balas": "Reply",
+  "Batalkan balasan": "Cancel reply",
+  "Kirim": "Send",
+  "Edit Profil": "Edit Profile",
+  "Ganti Password": "Change Password",
+  "Notifikasi": "Notifications",
+  "Bahasa": "Language",
+  "Bahasa Indonesia": "Indonesian",
+  "English": "English",
+  "Aktif": "Active",
+  "Pilih": "Choose",
+  "Bantuan": "Help",
+  "Logout": "Logout",
+  "Pusat Bantuan": "Help Center",
+  "Nama": "Name",
+  "Email": "Email",
+  "Simpan": "Save",
+  "Simpan Foto": "Save Photo",
+  "Pakai Avatar": "Use Avatar",
+  "Foto profil maksimal 2MB": "Profile photo max 2MB",
+  "Pilih Foto": "Choose Photo",
+  "Belum ada file dipilih": "No file selected",
+  "Password Lama": "Current Password",
+  "Password Baru": "New Password",
+  "Konfirmasi Password Baru": "Confirm New Password",
+  "Konfirmasi Password": "Confirm Password",
+  "Masuk": "Sign In",
+  "Daftar": "Sign Up",
+  "Memproses...": "Processing...",
+  "Sudah punya akun?": "Already have an account?",
+  "Belum punya akun?": "Don't have an account?",
+  "Buat akun EcoScan dan mulai catat aksi hijaumu.": "Create an EcoScan account and start tracking your green actions.",
+  "Ayo mulai langkah kecilmu untuk Bumi.": "Start your small step for the Earth.",
+  "Total Scan": "Total Scans",
+  "Poin": "Points",
+  "Streak": "Streak",
+  "Riwayat Scan": "Scan History",
+  "Bagaimana cara scan sampah?": "How do I scan waste?",
+  "Buka menu Scan, unggah gambar atau ambil foto, lalu tunggu hasil klasifikasi AI.": "Open Scan, upload or capture a photo, then wait for the AI classification.",
+  "Kenapa hasil scan tidak tersimpan?": "Why is my scan result not saved?",
+  "Pastikan backend FastAPI aktif dan konfigurasi Supabase sudah benar.": "Make sure the FastAPI backend is running and Supabase is configured correctly.",
+  "Kontak bantuan": "Support contact",
+  "Kirim laporan ke support@ecoscan.local dengan screenshot masalah yang kamu temui.": "Send a report to support@ecoscan.local with a screenshot of the issue.",
+  "Fakta Daur Ulang": "Recycling Facts",
+  "Botol plastik PET sebaiknya dicuci, dikeringkan, lalu disetor ke bank sampah.": "PET plastic bottles should be washed, dried, then sent to a waste bank.",
+  "Botol PET yang bersih lebih mudah diterima bank sampah karena tidak mencemari material lain. Lepaskan label bila memungkinkan, pipihkan botol untuk menghemat ruang, lalu kumpulkan berdasarkan jenis plastik.": "Clean PET bottles are easier for waste banks to accept because they do not contaminate other materials. Remove labels when possible, flatten bottles to save space, then sort by plastic type.",
+  "Sampah Organik": "Organic Waste",
+  "Sisa sayur dan buah bisa diolah menjadi kompos untuk mengurangi sampah rumah.": "Vegetable and fruit scraps can be composted to reduce household waste.",
+  "Sampah organik seperti kulit buah, sisa sayur, ampas kopi, dan daun kering bisa masuk komposter. Hindari minyak berlebih dan daging mentah agar kompos tidak berbau tajam.": "Organic waste such as fruit peels, vegetable scraps, coffee grounds, and dry leaves can go into a composter. Avoid excess oil and raw meat so the compost does not smell strong.",
+  "Pisahkan dari sumber": "Sort from the Source",
+  "Gunakan wadah berbeda untuk organik, anorganik, B3, kertas, dan residu.": "Use different containers for organic, inorganic, hazardous, paper, and residual waste.",
+  "Bersihkan kemasan": "Clean Packaging",
+  "Bilas botol atau kaleng agar tidak berbau dan lebih mudah diterima bank sampah.": "Rinse bottles or cans so they do not smell and are easier for waste banks to accept.",
+  "Olah sampah organik": "Process Organic Waste",
+  "Sisa sayur, buah, dan daun kering bisa menjadi kompos untuk tanaman.": "Vegetable scraps, fruit peels, and dry leaves can become compost for plants.",
+  "Scan 10 sampah plastik": "Scan 10 Plastic Waste Items",
+  "Kumpulkan scan plastik bersih minggu ini dan bagikan tips pemilahanmu.": "Collect clean plastic scans this week and share your sorting tips.",
+  "Tips memilah sampah dapur": "Kitchen Waste Sorting Tips",
+  "Pisahkan kulit buah dan sisa sayur sejak awal. Wadah kecil di dekat meja masak bikin kebiasaan ini lebih gampang.": "Separate fruit peels and vegetable scraps from the start. A small bin near the cooking table makes the habit easier.",
+  "Jadwal setor plastik minggu ini": "Plastic Drop-off Schedule This Week",
+  "Cuci dan keringkan botol plastik sebelum disetor supaya nilainya lebih tinggi.": "Wash and dry plastic bottles before dropping them off so they have better value.",
+  "Mulai dari 3 kategori": "Start with 3 Categories",
+  "Untuk pemula, pisahkan organik, anorganik, dan residu lebih dulu agar rutinitasnya mudah dijaga.": "For beginners, separate organic, inorganic, and residual waste first so the routine is easier to maintain.",
+  "Keringkan plastik sebelum disetor": "Dry Plastic Before Drop-off",
+  "Kemasan yang kering dan bersih memiliki nilai jual lebih baik di bank sampah.": "Dry and clean packaging has better value at waste banks.",
+  "Simpan limbah B3 terpisah": "Store Hazardous Waste Separately",
+  "Baterai, lampu, dan obat kedaluwarsa jangan dicampur dengan sampah rumah tangga.": "Batteries, lamps, and expired medicine should not be mixed with household waste.",
+  "Pemilahan": "Sorting",
+  "Daur ulang": "Recycling",
+  "Keamanan": "Safety",
+  "Anggota": "Member",
+  "Panduan": "Guide",
+  "Bank Sampah": "Waste Bank",
+  "Minggu ini": "This week",
+  "Hari ini": "Today",
+  "Kemarin": "Yesterday",
+  "Baru saja": "Just now",
+  "selesai": "done",
+  "poin": "points",
+  "MODEL AI": "AI MODEL",
+  "AKURASI": "ACCURACY",
+  "ALASAN DIPAKAI": "WHY WE USE IT",
+  "Kenapa Model Ini?": "Why This Model?",
+  "MobileNetV2 Transfer Learning": "MobileNetV2 Transfer Learning",
+  "Model ini membantu mengenali jenis sampah dari foto dengan cepat, sehingga pengguna bisa langsung memilah, menyetor, atau mengolah sampah sesuai kategori.": "This model helps identify waste types from photos quickly, so users can sort, drop off, or process waste according to its category.",
+  "Ringan untuk aplikasi web, cepat membaca gambar, dan cukup stabil membedakan pola visual sampah agar hasil scan bisa langsung dipakai untuk memilah dengan tepat.": "Lightweight for web apps, quick at reading images, and stable enough to distinguish waste visual patterns so scan results can be used for sorting right away.",
+  "Organik • Organik • Anorganik • B3 • Kertas • Residu": "Organic • Organic • Inorganic • Hazardous • Paper • Residual",
+  "Organik": "Organic",
+  "Anorganik": "Inorganic",
+  "Kertas": "Paper",
+  "Residu": "Residual",
+  "Pisahkan dari plastik, karet, logam, dan bahan non-organik lain.": "Separate it from plastic, rubber, metal, and other non-organic materials.",
+  "Tiriskan sisa makanan agar komposter tidak terlalu basah.": "Drain food scraps so the composter does not get too wet.",
+  "Potong kecil sisa sayur, buah, atau daun agar cepat terurai.": "Cut vegetable scraps, fruit, or leaves into smaller pieces so they decompose faster.",
+  "Campur dengan bahan coklat seperti daun kering, kardus, atau serbuk kayu.": "Mix with brown materials such as dry leaves, cardboard, or sawdust.",
+  "Aduk berkala dan simpan di tempat teduh sampai menjadi kompos.": "Stir regularly and keep it in a shaded place until it turns into compost.",
+  "Kosongkan isi kemasan agar tidak mengotori material lain.": "Empty packaging contents so they do not contaminate other materials.",
+  "Bilas dan keringkan botol, kaleng, atau plastik bernilai daur ulang.": "Rinse and dry bottles, cans, or recyclable plastic.",
+  "Pisahkan berdasarkan bahan seperti plastik, kaca, logam, dan kemasan multilayer.": "Sort by material such as plastic, glass, metal, and multilayer packaging.",
+  "Pipihkan botol atau kardus agar lebih hemat ruang.": "Flatten bottles or cardboard to save space.",
+  "Setorkan ke bank sampah atau drop point daur ulang terdekat.": "Drop it off at the nearest waste bank or recycling point.",
+  "Jangan dicampur dengan sampah rumah tangga biasa.": "Do not mix it with regular household waste.",
+  "Simpan baterai, lampu, obat, atau bahan kimia dalam wadah tertutup.": "Store batteries, lamps, medicine, or chemicals in a closed container.",
+  "Beri label jika limbah berbahaya agar tidak tertukar.": "Label hazardous waste so it does not get mixed up.",
+  "Jauhkan dari panas, air, dan jangkauan anak-anak.": "Keep it away from heat, water, and children.",
+  "Serahkan ke drop point limbah B3 atau fasilitas pengelolaan resmi.": "Take it to a hazardous-waste drop point or official handling facility.",
+  "Pastikan kertas kering dan bebas minyak atau sisa makanan.": "Make sure paper is dry and free from oil or food residue.",
+  "Pisahkan kertas putih, kardus, dan kemasan berlapis jika memungkinkan.": "Separate white paper, cardboard, and laminated packaging when possible.",
+  "Lepaskan plastik, selotip, atau bahan non-kertas yang menempel.": "Remove attached plastic, tape, or non-paper materials.",
+  "Pipihkan kardus agar mudah disimpan dan diangkut.": "Flatten cardboard so it is easier to store and transport.",
+  "Kumpulkan dalam kondisi bersih lalu setor ke bank sampah atau pengepul.": "Keep it clean, then send it to a waste bank or collector.",
+  "Pisahkan residu dari sampah yang masih bisa didaur ulang atau dikomposkan.": "Separate residual waste from items that can still be recycled or composted.",
+  "Bungkus residu tajam atau kotor agar aman saat diangkut.": "Wrap sharp or dirty residual waste so it is safe to transport.",
+  "Kurangi volume dengan menekan atau melipat jika aman dilakukan.": "Reduce volume by pressing or folding when safe.",
+  "Gunakan tempat sampah tertutup untuk mencegah bau dan kontaminasi.": "Use a covered bin to prevent odor and contamination.",
+  "Buang melalui layanan sampah resmi karena residu sulit diolah mandiri.": "Dispose of it through official waste service because residual waste is hard to process independently.",
+  "Judul tips atau cerita": "Tip or story title",
+  "Bagikan pengalaman, tips, atau info komunitas...": "Share experiences, tips, or community info...",
+  "total scan": "total scans",
+  "Label AI": "AI Label",
+  "Ikuti panduan pemilahan lokal dan simpan hasilnya ke riwayat.": "Follow your local sorting guide and save the result to history.",
+  "Balik kamera": "Switch camera",
+  "Mulai scan": "Start scan",
+  "Kamera aktif.": "Camera is active.",
+  "Kamera tidak bisa diakses.": "Camera cannot be accessed.",
+  "Scan berhasil disimpan ke riwayat.": "Scan saved to history.",
+  "Scan gagal diproses.": "Scan failed to process.",
+  "Riwayat berhasil diperbarui.": "History updated successfully.",
+  "Postingan dibuat.": "Post created.",
+  "Like tersimpan lokal sementara.": "Like saved locally for now.",
+  "Komentar ditambahkan.": "Comment added.",
+  "Balasan ditambahkan.": "Reply added.",
+  "Tema light aktif.": "Light theme is active.",
+  "Tema dark aktif.": "Dark theme is active.",
+  "Berhasil masuk.": "Signed in successfully.",
+  "Akun berhasil dibuat.": "Account created successfully.",
+  "Berhasil logout.": "Signed out successfully.",
+  "Profil berhasil diperbarui.": "Profile updated successfully.",
+  "Profil tersimpan lokal, backend belum tersambung.": "Profile saved locally; backend is not connected yet.",
+  "Password berhasil diperbarui.": "Password updated successfully.",
+  "File yang dipilih harus berupa gambar.": "Selected file must be an image.",
+  "Foto profil maksimal 2MB.": "Profile photo maximum is 2MB.",
+};
+
+const reverseTextTranslations = Object.fromEntries(
+  Object.entries(textTranslations).map(([idText, enText]) => [enText, idText])
+);
+
+const processingGuides = {
+  Organik: [
+    "Pisahkan dari plastik, karet, logam, dan bahan non-organik lain.",
+    "Tiriskan sisa makanan agar komposter tidak terlalu basah.",
+    "Potong kecil sisa sayur, buah, atau daun agar cepat terurai.",
+    "Campur dengan bahan coklat seperti daun kering, kardus, atau serbuk kayu.",
+    "Aduk berkala dan simpan di tempat teduh sampai menjadi kompos.",
+  ],
+  Anorganik: [
+    "Kosongkan isi kemasan agar tidak mengotori material lain.",
+    "Bilas dan keringkan botol, kaleng, atau plastik bernilai daur ulang.",
+    "Pisahkan berdasarkan bahan seperti plastik, kaca, logam, dan kemasan multilayer.",
+    "Pipihkan botol atau kardus agar lebih hemat ruang.",
+    "Setorkan ke bank sampah atau drop point daur ulang terdekat.",
+  ],
+  B3: [
+    "Jangan dicampur dengan sampah rumah tangga biasa.",
+    "Simpan baterai, lampu, obat, atau bahan kimia dalam wadah tertutup.",
+    "Beri label jika limbah berbahaya agar tidak tertukar.",
+    "Jauhkan dari panas, air, dan jangkauan anak-anak.",
+    "Serahkan ke drop point limbah B3 atau fasilitas pengelolaan resmi.",
+  ],
+  Kertas: [
+    "Pastikan kertas kering dan bebas minyak atau sisa makanan.",
+    "Pisahkan kertas putih, kardus, dan kemasan berlapis jika memungkinkan.",
+    "Lepaskan plastik, selotip, atau bahan non-kertas yang menempel.",
+    "Pipihkan kardus agar mudah disimpan dan diangkut.",
+    "Kumpulkan dalam kondisi bersih lalu setor ke bank sampah atau pengepul.",
+  ],
+  Residu: [
+    "Pisahkan residu dari sampah yang masih bisa didaur ulang atau dikomposkan.",
+    "Bungkus residu tajam atau kotor agar aman saat diangkut.",
+    "Kurangi volume dengan menekan atau melipat jika aman dilakukan.",
+    "Gunakan tempat sampah tertutup untuk mencegah bau dan kontaminasi.",
+    "Buang melalui layanan sampah resmi karena residu sulit diolah mandiri.",
+  ],
+};
+
+
+function createSvgThumb(type) {
+  const svg =
+    type === "plastic"
+      ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#d9f7e6"/><stop offset="1" stop-color="#7ed7a3"/></linearGradient></defs><rect width="320" height="220" rx="28" fill="url(#g)"/><circle cx="250" cy="50" r="34" fill="#fff8ea" opacity=".65"/><path d="M141 46h38v20h-38z" fill="#2f80ed"/><path d="M132 66h56l-7 112c-1 15-12 25-28 25s-27-10-28-25z" fill="#dff4ff" stroke="#176dbd" stroke-width="8"/><path d="M140 101h41M139 129h43M137 157h45" stroke="#85c7ee" stroke-width="8" stroke-linecap="round"/><path d="M62 164c28-47 75-50 112-16 24 21 47 22 83 0" fill="none" stroke="#0b6b43" stroke-width="12" stroke-linecap="round"/><path d="M63 84h46v46H63z" fill="#18b86f" opacity=".22"/></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#fff3c4"/><stop offset="1" stop-color="#a4d96c"/></linearGradient></defs><rect width="320" height="220" rx="28" fill="url(#g)"/><circle cx="66" cy="52" r="38" fill="#ffffff" opacity=".55"/><path d="M83 160c26-54 70-85 139-78-8 67-50 105-119 100" fill="#24b46b"/><path d="M109 155c38-27 70-42 110-56" stroke="#0b6b43" stroke-width="9" stroke-linecap="round"/><path d="M66 169h188l-16 30H82z" fill="#8a653a"/><path d="M90 132c22-20 53-20 71 0-22 19-50 20-71 0z" fill="#0f8f55"/><path d="M212 130c-17-21-16-48 3-66 17 22 16 46-3 66z" fill="#2bc77a"/></svg>`;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
 
 function createInitialComments(postId, items) {
   return items.map((item, index) => ({
@@ -24,22 +277,27 @@ function createInitialComments(postId, items) {
 const categoryMeta = {
   Organik: {
     tone: "green",
+    icon: "leaf",
     advice: "Pisahkan dari sampah kering, lalu olah menjadi kompos rumah tangga.",
   },
   Anorganik: {
     tone: "blue",
+    icon: "recycle",
     advice: "Bersihkan, keringkan, lalu bawa ke bank sampah atau pusat daur ulang.",
   },
   B3: {
     tone: "orange",
+    icon: "spark",
     advice: "Jangan dicampur dengan sampah lain. Serahkan ke titik pengumpulan limbah B3.",
   },
   Kertas: {
     tone: "brown",
+    icon: "gallery",
     advice: "Pastikan tidak basah atau berminyak agar mudah didaur ulang.",
   },
   Residu: {
     tone: "gray",
+    icon: "x",
     advice: "Masukkan ke wadah residu karena sulit didaur ulang secara mandiri.",
   },
 };
@@ -182,11 +440,15 @@ const communityTips = [
 ];
 
 const leaderboardItems = [
-  { rank: 1, name: "Raka", scans: 48, points: 320 },
-  { rank: 2, name: "Nadia", scans: 41, points: 286 },
-  { rank: 3, name: "Bima", scans: 36, points: 244 },
-  { rank: 4, name: "Sari", scans: 29, points: 198 },
+  { rank: 1, name: "Raka", scans: 48, points: 320, level_title: "Eco Guardian", avatar_url: "" },
+  { rank: 2, name: "Nadia", scans: 41, points: 286, level_title: "Eco Ranger", avatar_url: "" },
+  { rank: 3, name: "Bima", scans: 36, points: 244, level_title: "Eco Ranger", avatar_url: "" },
+  { rank: 4, name: "Sari", scans: 29, points: 198, level_title: "Eco Learner", avatar_url: "" },
 ];
+
+const emptyUserStats = { total_scans: 0, points: 0, streak: 0, level: 1, level_title: "Eco Starter" };
+
+
 
 function mapHistoryItem(item) {
   const confidence =
@@ -280,427 +542,477 @@ function formatRelativeTime(value) {
   return `${diffDays} hari lalu`;
 }
 
-function App() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    const storedUser = localStorage.getItem("ecoscan_user");
-    if (!storedUser) {
-      return null;
-    }
 
-    try {
-      return JSON.parse(storedUser);
-    } catch {
-      localStorage.removeItem("ecoscan_user");
-      return null;
-    }
-  });
-  const [activePage, setActivePage] = useState("home");
-  const [scanMode, setScanMode] = useState("upload");
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [prediction, setPrediction] = useState(null);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [historyItems, setHistoryItems] = useState(fallbackHistoryItems);
-  const [historyError, setHistoryError] = useState("");
-  const [challenge, setChallenge] = useState(weeklyChallenge);
-  const [communityItems, setCommunityItems] = useState(() => [
-    ...communityPosts.map(normalizePost),
-    ...communityTips.map(normalizePost),
-  ]);
-  const [leaderboard, setLeaderboard] = useState(leaderboardItems);
-  const [triviaItems, setTriviaItems] = useState(triviaCards);
-  const [notifications, setNotifications] = useState([
-    "Nadia membalas komentar kamu di Tips memilah sampah dapur.",
-    "Tantangan mingguan sudah 60% selesai.",
-    "Kamu mendapat 20 poin dari scan terbaru.",
-  ]);
-  const [language, setLanguage] = useState(() => localStorage.getItem("ecoscan_language") || "id");
-  const [isLightTheme, setIsLightTheme] = useState(() => {
-    return localStorage.getItem("ecoscan_theme") !== "dark";
-  });
-  const isAuthenticated = Boolean(currentUser);
-
-  const predictionTone = useMemo(() => {
-    return categoryMeta[prediction?.category || prediction?.predicted_class]?.tone || "green";
-  }, [prediction]);
-
-  const confidenceValue =
-    typeof prediction?.confidence === "number"
-      ? Number((prediction.confidence * 100).toFixed(2))
-      : 0;
-
-  const handleAuthenticate = async ({ email, name, password, mode }) => {
-    const response = await fetch(mode === "register" ? REGISTER_URL : LOGIN_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, name, password }),
-    });
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      throw new Error(data?.detail || "Autentikasi gagal.");
-    }
-
-    localStorage.setItem("ecoscan_user", JSON.stringify(data.user));
-    setCurrentUser(data.user);
-    setActivePage("home");
-  };
-
-  const loadHistory = async () => {
-    try {
-      const response = await fetch(HISTORY_URL);
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(data?.detail || "Riwayat belum bisa dimuat.");
-      }
-
-      const items = Array.isArray(data?.items) ? data.items.map(mapHistoryItem) : [];
-      setHistoryItems(items);
-      setHistoryError("");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Riwayat belum bisa dimuat.";
-      setHistoryError(message === "Failed to fetch" ? "Backend belum terhubung untuk riwayat." : message);
-    }
-  };
-
-  const loadCommunityData = async () => {
-    try {
-      const [challengeResponse, postsResponse, leaderboardResponse] = await Promise.all([
-        fetch(COMMUNITY_CHALLENGE_URL),
-        fetch(COMMUNITY_POSTS_URL),
-        fetch(COMMUNITY_LEADERBOARD_URL),
-      ]);
-
-      if (challengeResponse.ok) {
-        const data = await challengeResponse.json();
-        setChallenge(normalizeChallenge(data.challenge));
-      }
-
-      if (postsResponse.ok) {
-        const data = await postsResponse.json();
-        const items = Array.isArray(data.items) ? data.items.map(normalizePost) : [];
-        if (items.length) {
-          setCommunityItems(items);
-        }
-      }
-
-      if (leaderboardResponse.ok) {
-        const data = await leaderboardResponse.json();
-        if (Array.isArray(data.items) && data.items.length) {
-          setLeaderboard(data.items);
-        }
-      }
-    } catch {
-      setCommunityItems((items) => (items.length ? items : [...communityPosts, ...communityTips].map(normalizePost)));
-    }
-  };
-
-  const loadTrivia = async () => {
-    try {
-      const response = await fetch(TRIVIA_URL);
-      const data = await response.json().catch(() => null);
-
-      if (response.ok && Array.isArray(data?.items) && data.items.length) {
-        setTriviaItems(data.items.map(normalizeTrivia));
-      }
-    } catch {
-      setTriviaItems(triviaCards);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadHistory();
-      loadCommunityData();
-      loadTrivia();
-    }
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    localStorage.setItem("ecoscan_language", language);
-  }, [language]);
-
-  useEffect(() => {
-    localStorage.setItem("ecoscan_theme", isLightTheme ? "light" : "dark");
-  }, [isLightTheme]);
-
-  const handleImageChange = (event) => {
-    const file = event.target.files?.[0];
-
-    setPrediction(null);
-    setError("");
-
-    if (!file) {
-      setSelectedFile(null);
-      setPreviewUrl("");
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      setSelectedFile(null);
-      setPreviewUrl("");
-      setError("File yang dipilih harus berupa gambar.");
-      return;
-    }
-
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  };
-
-  const handlePredict = async (fileToPredict = selectedFile) => {
-    if (!fileToPredict) {
-      setError("Pilih atau ambil gambar sampah terlebih dahulu.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", fileToPredict);
-
-    setIsLoading(true);
-    setPrediction(null);
-    setError("");
-
-    try {
-      const response = await fetch(CLASSIFY_URL, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(data?.detail || "Server gagal memproses gambar.");
-      }
-
-      setPrediction(data);
-      await loadHistory();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Terjadi kesalahan yang tidak diketahui.";
-
-      setError(
-        message === "Failed to fetch"
-          ? `Gagal terhubung ke server AI. Pastikan FastAPI berjalan di ${API_BASE_URL}.`
-          : message
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetScan = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setSelectedFile(null);
-    setPreviewUrl("");
-    setPrediction(null);
-    setError("");
-  };
-
-  useEffect(() => {
-    if (selectedFile) {
-      handlePredict(selectedFile);
-    }
-  }, [selectedFile]);
-
-  if (!isAuthenticated) {
-    return <LoginPage onAuthenticate={handleAuthenticate} />;
+function translateText(value, language) {
+  if (language === "en") {
+    return textTranslations[value] || value;
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("ecoscan_user");
-    setCurrentUser(null);
-    setActivePage("home");
-  };
+  return reverseTextTranslations[value] || value;
+}
 
-  const handleUpdateUser = async (updates) => {
-    const updatedUser = { ...currentUser, ...updates };
-    setCurrentUser(updatedUser);
-    localStorage.setItem("ecoscan_user", JSON.stringify(updatedUser));
+function useDomTranslation(language) {
+  useEffect(() => {
+    const root = document.getElementById("root");
+    if (!root) return;
 
-    try {
-      await fetch(`${API_BASE_URL}/api/v1/users/${currentUser.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      });
-    } catch {
-      // Data tetap tersimpan lokal saat backend profil belum tersambung.
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode);
     }
-  };
 
-  const handleCreatePost = async ({ title, body }) => {
-    const newPost = normalizePost({
-      id: `local-post-${Date.now()}`,
-      author: currentUser?.name || "Eco Warrior",
-      badge: "Anggota",
-      title,
-      body,
-      type: "post",
-      likes: 0,
-      comments: [],
-      createdAt: "Baru saja",
+    textNodes.forEach((node) => {
+      const raw = node.nodeValue;
+      const trimmed = raw.trim();
+      if (!trimmed) return;
+      const translated = translateText(trimmed, language);
+      if (translated !== trimmed) {
+        node.nodeValue = raw.replace(trimmed, translated);
+      }
     });
 
-    setCommunityItems((items) => [newPost, ...items]);
-
-    try {
-      const response = await fetch(COMMUNITY_POSTS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          body,
-          author: newPost.author,
-          badge: newPost.badge,
-          user_id: currentUser?.id,
-        }),
-      });
-      const data = await response.json().catch(() => null);
-      if (response.ok && data?.item) {
-        const savedPost = normalizePost(data.item);
-        setCommunityItems((items) => items.map((item) => (item.id === newPost.id ? savedPost : item)));
+    root.querySelectorAll("input[placeholder], textarea[placeholder], [aria-label]").forEach((element) => {
+      if (element.placeholder) {
+        element.placeholder = translateText(element.placeholder, language);
       }
-    } catch {
-      // Optimistic UI: postingan lokal tetap tampil.
-    }
-  };
-
-  const handleToggleLike = async (postId) => {
-    const target = communityItems.find((item) => item.id === postId);
-    const nextLiked = !target?.isLiked;
-
-    setCommunityItems((items) =>
-      items.map((item) =>
-        item.id === postId
-          ? { ...item, isLiked: !item.isLiked, likes: Math.max(0, item.likes + (item.isLiked ? -1 : 1)) }
-          : item
-      )
-    );
-
-    try {
-      await fetch(`${COMMUNITY_POSTS_URL}/${postId}/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ liked: nextLiked }),
-      });
-    } catch {
-      // Like akan disinkronkan ulang saat data komunitas dimuat dari backend.
-    }
-  };
-
-  const handleAddComment = async (postId, body, parentId = null) => {
-    const newComment = {
-      id: `local-comment-${Date.now()}`,
-      author: currentUser?.name || "Eco Warrior",
-      body,
-      createdAt: "Baru saja",
-      replies: [],
-    };
-
-    setCommunityItems((items) =>
-      items.map((item) => {
-        if (item.id !== postId) return item;
-        if (!parentId) return { ...item, comments: [...item.comments, newComment] };
-
-        return {
-          ...item,
-          comments: item.comments.map((comment) =>
-            comment.id === parentId
-              ? { ...comment, replies: [...(comment.replies || []), newComment] }
-              : comment
-          ),
-        };
-      })
-    );
-
-    try {
-      const response = await fetch(`${COMMUNITY_POSTS_URL}/${postId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          body,
-          author: newComment.author,
-          parent_id: parentId,
-          user_id: currentUser?.id,
-        }),
-      });
-      if (response.ok) {
-        loadCommunityData();
+      const label = element.getAttribute("aria-label");
+      if (label) {
+        element.setAttribute("aria-label", translateText(label, language));
       }
-    } catch {
-      // Komentar lokal tetap digunakan jika backend belum tersedia.
-    }
-  };
+    });
+  });
+}
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Gagal membaca file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getErrorMessage(err, fallback) {
+  return err instanceof Error ? err.message : fallback;
+}
+
+
+function BrandLogo() {
   return (
-    <div className={`app-shell ${isLightTheme ? "light-theme" : "dark-theme"}`}>
-      <main className="phone-stage">
-        {activePage === "home" && <HomePage onNavigate={setActivePage} triviaItems={triviaItems} user={currentUser} />}
-        {activePage === "history" && (
-          <HistoryPage historyError={historyError} historyItems={historyItems} onRefresh={loadHistory} />
-        )}
-        {activePage === "scan" && (
-          <ScanPage
-            confidenceValue={confidenceValue}
-            error={error}
-            isLoading={isLoading}
-            onImageChange={handleImageChange}
-            onPredict={handlePredict}
-            onReset={resetScan}
-            prediction={prediction}
-            predictionTone={predictionTone}
-            previewUrl={previewUrl}
-            scanMode={scanMode}
-            selectedFile={selectedFile}
-            setScanMode={setScanMode}
-          />
-        )}
-        {activePage === "community" && (
-          <CommunityPage
-            challenge={challenge}
-            items={communityItems}
-            leaderboard={leaderboard}
-            onAddComment={handleAddComment}
-            onCreatePost={handleCreatePost}
-            onToggleLike={handleToggleLike}
-          />
-        )}
-        {activePage === "profile" && (
-          <ProfilePage
-            historyItems={historyItems}
-            isLightTheme={isLightTheme}
-            language={language}
-            notifications={notifications}
-            onLanguageChange={setLanguage}
-            onLogout={handleLogout}
-            onThemeToggle={setIsLightTheme}
-            onUpdateUser={handleUpdateUser}
-            user={currentUser}
-          />
-        )}
-      </main>
-
-      <BottomNavigation activePage={activePage} onNavigate={setActivePage} />
+    <div className="brand-logo" aria-label="Logo Eco Scan" role="img">
+      <img src="/ecoscan-logo-transparent.png" alt="EcoScan" />
+      <strong>EcoScan</strong>
     </div>
   );
 }
 
-function LoginPage({ onAuthenticate }) {
+function Modal({ children, onClose, title }) {
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="modal-header">
+          <h2>{title}</h2>
+          <button type="button" aria-label="Tutup" onClick={onClose}>
+            <Icon name="x" />
+          </button>
+        </header>
+        {children}
+      </section>
+    </div>
+  );
+}
+
+function ToastStack({ items }) {
+  if (!items.length) return null;
+
+  return (
+    <div className="toast-stack" aria-live="polite">
+      {items.map((item) => (
+        <article className={`toast-card ${item.type}`} key={item.id}>
+          <span className="toast-icon">
+            <Icon name={item.type === "error" ? "x" : item.type === "warning" ? "spark" : "leaf"} />
+          </span>
+          <p>{item.message}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function BottomNavigation({ activePage, onNavigate }) {
+  return (
+    <nav className="bottom-nav" aria-label="Navigasi utama">
+      {navItems.map((item) => (
+        <button
+          className={`${activePage === item.id ? "active" : ""} ${
+            item.id === "scan" ? "scan-nav" : ""
+          }`}
+          type="button"
+          key={item.id}
+          onClick={() => onNavigate(item.id)}
+        >
+          <Icon name={item.icon} />
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function TopBar({
+  title,
+  subtitle,
+  compact = false,
+  user = null,
+  isLightTheme = true,
+  notifications = [],
+  onNavigate = null,
+  onLogout = null,
+  onThemeToggle = null,
+}) {
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  const handleAccountClick = (page) => {
+    setIsAccountMenuOpen(false);
+    onNavigate?.(page);
+  };
+
+  return (
+    <header className={`top-bar ${compact ? "compact" : ""}`}>
+      <div>
+        <h1>{title}</h1>
+        {subtitle && <p>{subtitle}</p>}
+      </div>
+      <div className="top-actions">
+        <button type="button" aria-label="Notifikasi" onClick={() => setIsNotificationOpen(true)}>
+          <Icon name="bell" />
+        </button>
+        {onThemeToggle && (
+          <button className="theme-toggle" type="button" aria-label="Ganti tema" onClick={() => onThemeToggle((value) => !value)}>
+            <Icon name={isLightTheme ? "moon" : "sun"} />
+          </button>
+        )}
+        <div className="avatar-menu">
+          <button
+            className="avatar-button"
+            type="button"
+            aria-label="Akun"
+            aria-expanded={isAccountMenuOpen}
+            onClick={() => setIsAccountMenuOpen((value) => !value)}
+          >
+            <UserAvatar name={user?.name} src={user?.avatar_url} />
+          </button>
+          {isAccountMenuOpen && (
+            <div className="account-menu">
+              <button type="button" onClick={() => handleAccountClick("profile")}>
+                <Icon name="user" />
+                Akun
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAccountMenuOpen(false);
+                  onLogout?.();
+                }}
+              >
+                <Icon name="logout" />
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      {isNotificationOpen && (
+        <Modal title="Notifikasi" onClose={() => setIsNotificationOpen(false)}>
+          {notifications.length > 0 ? (
+            <div className="notification-list">
+              {notifications.map((item) => (
+                <article className="notification-item" key={item}>
+                  <Icon name="bell" />
+                  <p>{item}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="status-card empty-card">Belum ada notifikasi.</div>
+          )}
+        </Modal>
+      )}
+    </header>
+  );
+}
+
+function StatBlock({ value, label }) {
+  return (
+    <div className="stat-block">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function QuickAction({ icon, label, onClick }) {
+  return (
+    <button className="quick-action" type="button" onClick={onClick}>
+      <span>
+        <Icon name={icon} />
+      </span>
+      {label}
+    </button>
+  );
+}
+
+function Icon({ name }) {
+  const common = {
+    className: "icon",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": "true",
+  };
+
+  switch (name) {
+    case "home":
+      return (
+        <svg {...common}>
+          <path d="m3 10.5 9-7 9 7" />
+          <path d="M5 10v10h14V10" />
+          <path d="M9 20v-6h6v6" />
+        </svg>
+      );
+    case "history":
+      return (
+        <svg {...common}>
+          <path d="M3 12a9 9 0 1 0 3-6.7" />
+          <path d="M3 4v5h5" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+      );
+    case "chevron-left":
+      return (
+        <svg {...common}>
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      );
+    case "chevron-right":
+      return (
+        <svg {...common}>
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      );
+    case "scanner":
+      return (
+        <svg {...common}>
+          <path d="M7 3H5a2 2 0 0 0-2 2v2" />
+          <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+          <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+          <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+          <path d="M8 8h8v8H8z" />
+          <path d="M11 11h2v2h-2z" />
+        </svg>
+      );
+    case "people":
+      return (
+        <svg {...common}>
+          <path d="M16 21v-2a4 4 0 0 0-8 0v2" />
+          <circle cx="12" cy="8" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.9" />
+          <path d="M16 4.1a4 4 0 0 1 0 7.8" />
+          <path d="M2 21v-2a4 4 0 0 1 3-3.9" />
+          <path d="M8 4.1a4 4 0 0 0 0 7.8" />
+        </svg>
+      );
+    case "user":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+      );
+    case "logout":
+      return (
+        <svg {...common}>
+          <path d="M10 17l5-5-5-5" />
+          <path d="M15 12H3" />
+          <path d="M14 4h4a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-4" />
+        </svg>
+      );
+    case "flashlight":
+      return (
+        <svg {...common}>
+          <path d="M9 2h6" />
+          <path d="M10 2v5l-2 3v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V10l-2-3V2" />
+          <path d="M10 10h4" />
+          <path d="M12 14v4" />
+        </svg>
+      );
+    case "camera":
+      return (
+        <svg {...common}>
+          <path d="M14.5 5 13 3H9L7.5 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" />
+          <circle cx="12" cy="12" r="4" />
+        </svg>
+      );
+    case "gallery":
+      return (
+        <svg {...common}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <circle cx="8" cy="10" r="1.5" />
+          <path d="m21 16-5-5L5 19" />
+        </svg>
+      );
+    case "bell":
+      return (
+        <svg {...common}>
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M10 21h4" />
+        </svg>
+      );
+    case "search":
+      return (
+        <svg {...common}>
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      );
+    case "x":
+      return (
+        <svg {...common}>
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      );
+    case "mail":
+      return (
+        <svg {...common}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m3 7 9 6 9-6" />
+        </svg>
+      );
+    case "lock":
+      return (
+        <svg {...common}>
+          <rect x="4" y="10" width="16" height="10" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+      );
+    case "eye":
+      return (
+        <svg {...common}>
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
+    case "eye-off":
+      return (
+        <svg {...common}>
+          <path d="M3 3l18 18" />
+          <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+          <path d="M9.5 5.4A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a13.6 13.6 0 0 1-2.1 3.1" />
+          <path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7a9.5 9.5 0 0 0 4.1-.9" />
+        </svg>
+      );
+    case "sun":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2" />
+          <path d="M12 20v2" />
+          <path d="m4.9 4.9 1.4 1.4" />
+          <path d="m17.7 17.7 1.4 1.4" />
+          <path d="M2 12h2" />
+          <path d="M20 12h2" />
+          <path d="m4.9 19.1 1.4-1.4" />
+          <path d="m17.7 6.3 1.4-1.4" />
+        </svg>
+      );
+    case "moon":
+      return (
+        <svg {...common}>
+          <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 7 7 0 1 0 20.5 14.5z" />
+        </svg>
+      );
+    case "rotate":
+      return (
+        <svg {...common}>
+          <path d="M21 12a9 9 0 0 1-15.5 6.2" />
+          <path d="M3 12A9 9 0 0 1 18.5 5.8" />
+          <path d="M18 2v4h-4" />
+          <path d="M6 22v-4h4" />
+        </svg>
+      );
+    case "switch-camera":
+      return <SwitchCamera {...common} />;
+    case "loader":
+      return (
+        <svg {...common}>
+          <path d="M21 12a9 9 0 1 1-6.2-8.6" />
+        </svg>
+      );
+    case "recycle":
+      return (
+        <svg {...common}>
+          <path d="m7 19-2-3 2-3" />
+          <path d="M5 16h8a4 4 0 0 0 3.4-6.1" />
+          <path d="m17 5 2 3-2 3" />
+          <path d="M19 8h-8a4 4 0 0 0-3.4 6.1" />
+        </svg>
+      );
+    case "spark":
+      return (
+        <svg {...common}>
+          <path d="M12 2v5" />
+          <path d="M12 17v5" />
+          <path d="m4.9 4.9 3.5 3.5" />
+          <path d="m15.6 15.6 3.5 3.5" />
+          <path d="M2 12h5" />
+          <path d="M17 12h5" />
+          <path d="m4.9 19.1 3.5-3.5" />
+          <path d="m15.6 8.4 3.5-3.5" />
+        </svg>
+      );
+    case "leaf":
+      return (
+        <svg {...common}>
+          <path d="M4 20c8-2 14-8 16-16-8 1-14 4-17 10 0 3 1 5 1 6z" />
+          <path d="M4 20c3-5 7-8 12-10" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+function UserAvatar({ className = "", name = "E", src = "" }) {
+  const initial = (name || "E").charAt(0).toUpperCase();
+  return (
+    <span className={`avatar ${src ? "has-photo" : ""} ${className}`}>
+      {src ? <img src={src} alt={`Foto profil ${name}`} /> : initial}
+    </span>
+  );
+}
+
+
+
+function LoginPage({ isLightTheme, onAuthenticate, onThemeToggle }) {
   const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRegister = mode === "register";
@@ -709,6 +1021,12 @@ function LoginPage({ onAuthenticate }) {
     event.preventDefault();
     setAuthError("");
     setIsSubmitting(true);
+
+    if (isRegister && password !== confirmPassword) {
+      setAuthError("Konfirmasi password belum sama.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       await onAuthenticate({ email, name, password, mode });
@@ -723,11 +1041,15 @@ function LoginPage({ onAuthenticate }) {
   const switchMode = () => {
     setMode(isRegister ? "login" : "register");
     setAuthError("");
+    setConfirmPassword("");
   };
 
   return (
-    <main className="auth-page">
+    <main className={`auth-page ${isLightTheme ? "light-theme" : "dark-theme"}`}>
       <section className="auth-card">
+        <button className="auth-theme-toggle" type="button" aria-label="Ganti tema" onClick={() => onThemeToggle((value) => !value)}>
+          <Icon name={isLightTheme ? "moon" : "sun"} />
+        </button>
         <BrandLogo />
         <p>{isRegister ? "Buat akun EcoScan dan mulai catat aksi hijaumu." : "Ayo mulai langkah kecilmu untuk Bumi."}</p>
 
@@ -769,9 +1091,30 @@ function LoginPage({ onAuthenticate }) {
               aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
               onClick={() => setShowPassword((value) => !value)}
             >
-              <Icon name="eye" />
+              <Icon name={showPassword ? "eye" : "eye-off"} />
             </button>
           </label>
+
+          {isRegister && (
+            <label className="input-group">
+              <Icon name="lock" />
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Konfirmasi Password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                minLength={6}
+                required
+              />
+              <button
+                type="button"
+                aria-label={showConfirmPassword ? "Sembunyikan password" : "Tampilkan password"}
+                onClick={() => setShowConfirmPassword((value) => !value)}
+              >
+                <Icon name={showConfirmPassword ? "eye" : "eye-off"} />
+              </button>
+            </label>
+          )}
 
           {authError && <div className="status-card error-card auth-error">{authError}</div>}
 
@@ -791,32 +1134,57 @@ function LoginPage({ onAuthenticate }) {
   );
 }
 
-function BrandLogo() {
-  return (
-    <div className="brand-logo" aria-label="Logo Eco Scan" role="img">
-      <span className="brand-logo-mark">
-        <Icon name="leaf" />
-      </span>
-      <strong>Eco</strong>
-      <span>Scan</span>
-    </div>
-  );
-}
 
-function HomePage({ onNavigate, triviaItems, user }) {
+
+function HomePage({ isLightTheme, notifications, onLogout, onNavigate, onThemeToggle, stats, triviaItems, user }) {
   const firstName = user?.name?.split(" ")[0] || "Eco Warrior";
   const [selectedTrivia, setSelectedTrivia] = useState(null);
 
   return (
     <section className="page-content">
-      <TopBar title={`Halo, ${firstName}!`} subtitle="Selamat datang kembali" user={user} />
+      <TopBar
+        title={`Halo, ${firstName}!`}
+        subtitle="Selamat datang kembali"
+        user={user}
+        isLightTheme={isLightTheme}
+        notifications={notifications}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+        onThemeToggle={onThemeToggle}
+      />
 
       <section className="hero-card">
         <p>Selamat Datang di Eco Scan</p>
         <div className="hero-stats">
-          <StatBlock value="15" label="Scan Minggu Ini" />
-          <StatBlock value="120" label="Poin Eco" />
-          <StatBlock value="5" label="Hari Streak" />
+          <StatBlock value={stats.total_scans} label="Total Scan" />
+          <StatBlock value={stats.points} label="Poin Eco" />
+          <StatBlock value={stats.streak} label="Hari Streak" />
+        </div>
+      </section>
+
+      <section className="model-card">
+        <div className="model-card-head">
+          <span>
+            <Icon name="spark" />
+          </span>
+          <div>
+            <small>MODEL AI</small>
+            <h2>MobileNetV2 Transfer Learning</h2>
+          </div>
+        </div>
+        <div className="model-metrics">
+          <div>
+            <small>AKURASI</small>
+            <strong>93%</strong>
+            <p className="model-class-list">Organik &bull; Organik &bull; Anorganik &bull; B3 &bull; Kertas &bull; Residu</p>
+          </div>
+          <div>
+            <small>Kenapa Model Ini?</small>
+            <p>
+              Ringan untuk aplikasi web, cepat membaca gambar, dan cukup stabil membedakan pola visual sampah agar
+              hasil scan bisa langsung dipakai untuk memilah dengan tepat.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -877,40 +1245,138 @@ function HomePage({ onNavigate, triviaItems, user }) {
   );
 }
 
+
+
+function HistoryPage({ historyError, historyItems, isLightTheme, notifications, onLogout, onNavigate, onRefresh, onThemeToggle, user }) {
+  return (
+    <section className="page-content">
+      <TopBar
+        title="Riwayat"
+        subtitle="Aktivitas scan terbaru"
+        user={user}
+        isLightTheme={isLightTheme}
+        notifications={notifications}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+        onThemeToggle={onThemeToggle}
+      />
+      {historyError && (
+        <div className="status-card error-card">
+          {historyError}
+          <button className="inline-action" type="button" onClick={onRefresh}>
+            Muat ulang
+          </button>
+        </div>
+      )}
+      <HistoryList items={historyItems} />
+    </section>
+  );
+}
+
+function HistoryList({ items }) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / HISTORY_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleItems = items.slice((currentPage - 1) * HISTORY_PAGE_SIZE, currentPage * HISTORY_PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [items.length]);
+
+  if (items.length === 0) {
+    return <div className="status-card empty-card">Belum ada riwayat scan.</div>;
+  }
+
+  return (
+    <>
+      <div className="history-list">
+        {visibleItems.map((item) => (
+          <article className="history-item" key={item.id || `${item.name}-${item.time}`}>
+            <div className="history-copy">
+              <strong>{item.name}</strong>
+              <span>{item.time}</span>
+            </div>
+            <div className="history-meta">
+              <span className={`category-badge ${categoryMeta[item.category]?.tone || "green"}`}>
+                {item.category}
+              </span>
+              <small>{item.confidence}%</small>
+            </div>
+          </article>
+        ))}
+      </div>
+      {totalPages > 1 && (
+        <div className="history-pagination">
+          <button type="button" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>
+            <Icon name="chevron-left" />
+          </button>
+          <span>
+            <strong>{currentPage}</strong>
+            <small>/ {totalPages}</small>
+          </span>
+          <button type="button" disabled={currentPage === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>
+            <Icon name="chevron-right" />
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+
+
 function ScanPage({
+  cameraFacing,
+  cameraStream,
   confidenceValue,
   error,
   isLoading,
+  isLightTheme,
   onImageChange,
-  onPredict,
+  onPrimaryScan,
   onReset,
+  onSwitchCamera,
+  notifications,
+  onLogout,
+  onNavigate,
+  onThemeToggle,
   prediction,
   predictionTone,
   previewUrl,
   scanMode,
   selectedFile,
   setScanMode,
+  user,
+  videoRef,
 }) {
-  const cameraInputRef = useRef(null);
+  const uploadInputRef = useRef(null);
   const resultCategory = prediction?.category || prediction?.predicted_class;
   const specificClass = prediction?.specific_class || prediction?.predicted_class;
   const advice =
     prediction?.handling_advice ||
     categoryMeta[resultCategory]?.advice ||
     "Ikuti panduan pemilahan lokal dan simpan hasilnya ke riwayat.";
+  const guideSteps = processingGuides[resultCategory] || [];
 
-  const handleShutterClick = () => {
-    if (selectedFile) {
-      onPredict();
-      return;
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(() => null);
     }
-
-    cameraInputRef.current?.click();
-  };
+  }, [cameraStream, videoRef]);
 
   return (
     <section className="page-content scan-page">
-      <TopBar title={prediction ? "Hasil Scan" : "Scan Sampah"} compact />
+      <TopBar
+        title={prediction ? "Hasil Scan" : "Scan Sampah"}
+        compact
+        user={user}
+        isLightTheme={isLightTheme}
+        notifications={notifications}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+        onThemeToggle={onThemeToggle}
+      />
 
       <div className="segmented-control">
         <button
@@ -930,14 +1396,14 @@ function ScanPage({
       </div>
 
       <label className={`scanner-frame ${previewUrl ? "has-preview" : ""}`}>
-        <input
-          accept="image/*"
-          capture={scanMode === "camera" ? "environment" : undefined}
-          type="file"
-          onChange={onImageChange}
-          disabled={isLoading}
-        />
-        {previewUrl ? (
+        {cameraStream && scanMode === "camera" && !previewUrl ? (
+          <>
+            <video ref={videoRef} playsInline muted />
+            <button className="camera-switch-button" type="button" aria-label="Balik kamera" onClick={onSwitchCamera}>
+              <Icon name="switch-camera" />
+            </button>
+          </>
+        ) : previewUrl ? (
           <img src={previewUrl} alt="Preview sampah" />
         ) : (
           <div className="scanner-empty">
@@ -957,34 +1423,36 @@ function ScanPage({
       </label>
 
       <p className="scan-helper">
-        {selectedFile ? selectedFile.name : "Arahkan kamera atau unggah gambar sampah Anda."}
+        {selectedFile
+          ? selectedFile.name
+          : scanMode === "camera"
+            ? "Arahkan kamera ke sampah, lalu tekan tombol scan."
+            : "Unggah gambar sampah dari galeri untuk mulai scan."}
       </p>
 
       <div className="scan-actions" aria-label="Kontrol kamera">
         <input
-          ref={cameraInputRef}
+          ref={uploadInputRef}
           className="camera-capture-input"
           accept="image/*"
-          capture="environment"
           type="file"
           onChange={onImageChange}
         />
-        <button className="round-tool" type="button" aria-label="Senter">
-          <Icon name="flashlight" />
+        <button className={`round-tool scan-status-tool ${prediction ? "detected" : "waiting"}`} type="button" aria-label="Status scan">
+          {prediction ? <Icon name={categoryMeta[resultCategory]?.icon || "recycle"} /> : <span className="waiting-dots"><i /><i /><i /></span>}
         </button>
         <button
           className="capture-button"
           type="button"
-          onClick={handleShutterClick}
+          onClick={() => onPrimaryScan(uploadInputRef)}
           disabled={isLoading}
-          aria-label={selectedFile ? "Mulai prediksi" : "Ambil foto"}
+          aria-label="Mulai scan"
         >
-          <Icon name={isLoading ? "loader" : "camera"} />
+          <Icon name={isLoading ? "loader" : "scanner"} />
         </button>
-        <label className="round-tool" aria-label="Galeri">
-          <Icon name="gallery" />
-          <input accept="image/*" type="file" onChange={onImageChange} />
-        </label>
+        <button className="round-tool" type="button" aria-label="Reset scan" onClick={onReset}>
+          <Icon name="rotate" />
+        </button>
       </div>
 
       {error && <div className="status-card error-card">{error}</div>}
@@ -1014,6 +1482,16 @@ function ScanPage({
             <strong>Cara Pengolahan</strong>
             <p>{advice}</p>
           </div>
+          {guideSteps.length > 0 && (
+            <div className="processing-guide">
+              <strong>Langkah Pengolahan</strong>
+              <ol>
+                {guideSteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
           <div className="result-actions">
             <button className="primary-action" type="button" disabled>
               Tersimpan di Riwayat
@@ -1028,7 +1506,9 @@ function ScanPage({
   );
 }
 
-function CommunityPage({ challenge, items, leaderboard, onAddComment, onCreatePost, onToggleLike }) {
+
+
+function CommunityPage({ challenge, isLightTheme, items, leaderboard, notifications, onAddComment, onCreatePost, onLogout, onNavigate, onThemeToggle, onToggleLike, user }) {
   const [activeTab, setActiveTab] = useState("feed");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPost, setSelectedPost] = useState(null);
@@ -1042,10 +1522,25 @@ function CommunityPage({ challenge, items, leaderboard, onAddComment, onCreatePo
   });
   const feedItems = filteredItems.filter((item) => item.type !== "tip");
   const tipItems = filteredItems.filter((item) => item.type === "tip");
+  const filteredLeaderboard = leaderboard.filter((item) => {
+    if (!normalizedSearch) return true;
+    return [item.name, item.rank, item.scans, item.points]
+      .filter((value) => value !== undefined && value !== null)
+      .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+  });
 
   return (
     <section className="page-content">
-      <TopBar title="Komunitas" subtitle="Belajar dan bergerak bersama" />
+      <TopBar
+        title="Komunitas"
+        subtitle="Belajar dan bergerak bersama"
+        user={user}
+        isLightTheme={isLightTheme}
+        notifications={notifications}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+        onThemeToggle={onThemeToggle}
+      />
 
       <label className="search-box">
         <Icon name="search" />
@@ -1093,7 +1588,7 @@ function CommunityPage({ challenge, items, leaderboard, onAddComment, onCreatePo
       {activeTab === "tips" && (
         <CommunityTips items={tipItems} onOpenPost={setSelectedPost} onToggleLike={onToggleLike} />
       )}
-      {activeTab === "leaderboard" && <CommunityLeaderboard items={leaderboard} />}
+      {activeTab === "leaderboard" && <CommunityLeaderboard items={filteredLeaderboard} />}
 
       {selectedPostData && (
         <PostDetailModal
@@ -1213,12 +1708,15 @@ function CommunityLeaderboard({ items }) {
   return (
     <section className="leaderboard-list">
       {items.map((item, index) => (
-        <article className="leaderboard-item" key={item.name}>
+        <article className="leaderboard-item" key={item.id || item.name}>
           <strong className="rank-number">{item.rank || index + 1}</strong>
-          <div className="avatar small">{item.name[0]}</div>
+          <UserAvatar className="small" name={item.name} src={item.avatar_url} />
           <div>
             <h3>{item.name}</h3>
-            <p>{item.scans} scan minggu ini</p>
+            <p>
+              <span>{item.level_title || "Eco Starter"}</span>
+              <small>{item.scans} total scan</small>
+            </p>
           </div>
           <strong>{item.points}</strong>
         </article>
@@ -1318,37 +1816,56 @@ function CommentList({ comments, onReply }) {
   );
 }
 
+
+
 function ProfilePage({
   historyItems,
   isLightTheme,
   language,
   notifications,
+  onChangePassword,
   onLanguageChange,
   onLogout,
+  onNavigate,
+  onPhotoUpdate,
   onThemeToggle,
   onUpdateUser,
+  stats,
   user,
 }) {
   const displayName = user?.name || "Eco Warrior";
   const displayEmail = user?.email || "user@ecoscan.local";
-  const initial = displayName.charAt(0).toUpperCase();
   const [activePanel, setActivePanel] = useState(null);
 
   return (
     <section className="page-content profile-page">
-      <TopBar title="Akun" compact user={user} />
+      <TopBar
+        title="Akun"
+        compact
+        user={user}
+        isLightTheme={isLightTheme}
+        notifications={notifications}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+        onThemeToggle={onThemeToggle}
+      />
 
       <section className="profile-card">
-        <div className="avatar large">{initial}</div>
+        <div className="profile-avatar-wrap">
+          <UserAvatar className="large" name={displayName} src={user?.avatar_url} />
+          <button className="avatar-camera-button" type="button" aria-label="Ganti foto profil" onClick={() => setActivePanel("photo")}>
+            <Icon name="camera" />
+          </button>
+        </div>
         <h1>{displayName}</h1>
         <p>{displayEmail}</p>
-        <span>Eco Warrior Level 3</span>
+        <span className="profile-level">{stats.level_title}</span>
       </section>
 
       <div className="profile-stats">
-        <StatBlock value="48" label="Total Scan" />
-        <StatBlock value="320" label="Poin" />
-        <StatBlock value="7" label="Streak" />
+        <StatBlock value={stats.total_scans} label="Total Scan" />
+        <StatBlock value={stats.points} label="Poin" />
+        <StatBlock value={stats.streak} label="Streak" />
       </div>
 
       <section className="section-block">
@@ -1361,23 +1878,23 @@ function ProfilePage({
       <section className="settings-list">
         <button type="button" onClick={() => setActivePanel("edit")}>
           <span>Edit Profil</span>
-          <strong>&gt;</strong>
+          <ChevronRight className="settings-chevron" aria-hidden="true" />
+        </button>
+        <button type="button" onClick={() => setActivePanel("password")}>
+          <span>Ganti Password</span>
+          <ChevronRight className="settings-chevron" aria-hidden="true" />
         </button>
         <button type="button" onClick={() => setActivePanel("notifications")}>
           <span>Notifikasi</span>
           <strong>{notifications.length}</strong>
         </button>
         <button type="button" onClick={() => setActivePanel("language")}>
-          <span>Bahasa Indonesia</span>
-          <strong>{language === "id" ? "Aktif" : "Pilih"}</strong>
-        </button>
-        <button type="button" onClick={() => onThemeToggle((value) => !value)}>
-          <span>Tema Light</span>
-          <strong>{isLightTheme ? "On" : "Off"}</strong>
+          <span>{language === "en" ? "English" : "Bahasa Indonesia"}</span>
+          <strong>Aktif</strong>
         </button>
         <button type="button" onClick={() => setActivePanel("help")}>
           <span>Bantuan</span>
-          <strong>&gt;</strong>
+          <ChevronRight className="settings-chevron" aria-hidden="true" />
         </button>
         <button className="logout-button" type="button" onClick={onLogout}>
           Logout
@@ -1389,6 +1906,25 @@ function ProfilePage({
           onClose={() => setActivePanel(null)}
           onSubmit={(updates) => {
             onUpdateUser(updates);
+            setActivePanel(null);
+          }}
+          user={user}
+        />
+      )}
+      {activePanel === "password" && (
+        <ChangePasswordModal
+          onClose={() => setActivePanel(null)}
+          onSubmit={async (payload) => {
+            await onChangePassword(payload);
+            setActivePanel(null);
+          }}
+        />
+      )}
+      {activePanel === "photo" && (
+        <ProfilePhotoModal
+          onClose={() => setActivePanel(null)}
+          onSubmit={async (avatarUrl) => {
+            await onPhotoUpdate(avatarUrl);
             setActivePanel(null);
           }}
           user={user}
@@ -1418,6 +1954,16 @@ function ProfilePage({
               }}
             >
               Bahasa Indonesia
+            </button>
+            <button
+              className={language === "en" ? "active" : ""}
+              type="button"
+              onClick={() => {
+                onLanguageChange("en");
+                setActivePanel(null);
+              }}
+            >
+              English
             </button>
           </div>
         </Modal>
@@ -1472,300 +2018,794 @@ function EditProfileModal({ onClose, onSubmit, user }) {
   );
 }
 
-function HistoryPage({ historyError, historyItems, onRefresh }) {
-  return (
-    <section className="page-content">
-      <TopBar title="Riwayat" subtitle="Aktivitas scan terbaru" />
-      {historyError && (
-        <div className="status-card error-card">
-          {historyError}
-          <button className="inline-action" type="button" onClick={onRefresh}>
-            Muat ulang
-          </button>
-        </div>
-      )}
-      <HistoryList items={historyItems} />
-    </section>
-  );
-}
-
-function HistoryList({ items }) {
-  if (items.length === 0) {
-    return <div className="status-card empty-card">Belum ada riwayat scan.</div>;
-  }
+function PasswordField({ label, value, onChange }) {
+  const [isVisible, setIsVisible] = useState(false);
 
   return (
-    <div className="history-list">
-      {items.map((item) => (
-        <article className="history-item" key={item.id || `${item.name}-${item.time}`}>
-          <div className="history-copy">
-            <strong>{item.name}</strong>
-            <span>{item.time}</span>
-          </div>
-          <div className="history-meta">
-            <span className={`category-badge ${categoryMeta[item.category]?.tone}`}>
-              {item.category}
-            </span>
-            <small>{item.confidence}%</small>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function Modal({ children, onClose, title }) {
-  return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
-        className="modal-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2>{title}</h2>
-          <button type="button" aria-label="Tutup" onClick={onClose}>
-            <Icon name="x" />
-          </button>
-        </header>
-        {children}
-      </section>
-    </div>
-  );
-}
-
-function BottomNavigation({ activePage, onNavigate }) {
-  return (
-    <nav className="bottom-nav" aria-label="Navigasi utama">
-      {navItems.map((item) => (
-        <button
-          className={`${activePage === item.id ? "active" : ""} ${
-            item.id === "scan" ? "scan-nav" : ""
-          }`}
-          type="button"
-          key={item.id}
-          onClick={() => onNavigate(item.id)}
-        >
-          <Icon name={item.icon} />
-          {item.label}
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-function TopBar({ title, subtitle, compact = false, user = null }) {
-  const initial = (user?.name || "E").charAt(0).toUpperCase();
-
-  return (
-    <header className={`top-bar ${compact ? "compact" : ""}`}>
-      <div>
-        <h1>{title}</h1>
-        {subtitle && <p>{subtitle}</p>}
-      </div>
-      <div className="top-actions">
-        <div className="avatar">{initial}</div>
-        <button type="button" aria-label="Notifikasi">
-          <Icon name="bell" />
-        </button>
-      </div>
-    </header>
-  );
-}
-
-function StatBlock({ value, label }) {
-  return (
-    <div className="stat-block">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-function QuickAction({ icon, label, onClick }) {
-  return (
-    <button className="quick-action" type="button" onClick={onClick}>
-      <span>
-        <Icon name={icon} />
-      </span>
+    <label>
       {label}
-    </button>
+      <span className="password-field">
+        <Icon name="lock" />
+        <input
+          type={isVisible ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          minLength={6}
+          required
+          placeholder={label}
+        />
+        <button type="button" aria-label={isVisible ? "Sembunyikan password" : "Tampilkan password"} onClick={() => setIsVisible((value) => !value)}>
+          <Icon name={isVisible ? "eye" : "eye-off"} />
+        </button>
+      </span>
+    </label>
   );
 }
 
-function Icon({ name }) {
-  const common = {
-    className: "icon",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": "true",
+function ChangePasswordModal({ onClose, onSubmit }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState("");
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setFormError("");
+
+    if (newPassword !== confirmPassword) {
+      setFormError("Konfirmasi password baru belum sama.");
+      return;
+    }
+
+    await onSubmit({
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
   };
 
-  switch (name) {
-    case "home":
-      return (
-        <svg {...common}>
-          <path d="m3 10.5 9-7 9 7" />
-          <path d="M5 10v10h14V10" />
-          <path d="M9 20v-6h6v6" />
-        </svg>
-      );
-    case "history":
-      return (
-        <svg {...common}>
-          <path d="M3 12a9 9 0 1 0 3-6.7" />
-          <path d="M3 4v5h5" />
-          <path d="M12 7v5l3 2" />
-        </svg>
-      );
-    case "scanner":
-      return (
-        <svg {...common}>
-          <path d="M7 3H5a2 2 0 0 0-2 2v2" />
-          <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-          <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-          <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-          <path d="M8 8h8v8H8z" />
-          <path d="M11 11h2v2h-2z" />
-        </svg>
-      );
-    case "people":
-      return (
-        <svg {...common}>
-          <path d="M16 21v-2a4 4 0 0 0-8 0v2" />
-          <circle cx="12" cy="8" r="4" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.9" />
-          <path d="M16 4.1a4 4 0 0 1 0 7.8" />
-          <path d="M2 21v-2a4 4 0 0 1 3-3.9" />
-          <path d="M8 4.1a4 4 0 0 0 0 7.8" />
-        </svg>
-      );
-    case "user":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21a8 8 0 0 1 16 0" />
-        </svg>
-      );
-    case "flashlight":
-      return (
-        <svg {...common}>
-          <path d="M9 2h6" />
-          <path d="M10 2v5l-2 3v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V10l-2-3V2" />
-          <path d="M10 10h4" />
-          <path d="M12 14v4" />
-        </svg>
-      );
-    case "camera":
-      return (
-        <svg {...common}>
-          <path d="M14.5 5 13 3H9L7.5 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" />
-          <circle cx="12" cy="12" r="4" />
-        </svg>
-      );
-    case "gallery":
-      return (
-        <svg {...common}>
-          <rect x="3" y="5" width="18" height="14" rx="2" />
-          <circle cx="8" cy="10" r="1.5" />
-          <path d="m21 16-5-5L5 19" />
-        </svg>
-      );
-    case "bell":
-      return (
-        <svg {...common}>
-          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-          <path d="M10 21h4" />
-        </svg>
-      );
-    case "search":
-      return (
-        <svg {...common}>
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-      );
-    case "x":
-      return (
-        <svg {...common}>
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
-      );
-    case "mail":
-      return (
-        <svg {...common}>
-          <rect x="3" y="5" width="18" height="14" rx="2" />
-          <path d="m3 7 9 6 9-6" />
-        </svg>
-      );
-    case "lock":
-      return (
-        <svg {...common}>
-          <rect x="4" y="10" width="16" height="10" rx="2" />
-          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-        </svg>
-      );
-    case "eye":
-      return (
-        <svg {...common}>
-          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      );
-    case "loader":
-      return (
-        <svg {...common}>
-          <path d="M21 12a9 9 0 1 1-6.2-8.6" />
-        </svg>
-      );
-    case "recycle":
-      return (
-        <svg {...common}>
-          <path d="m7 19-2-3 2-3" />
-          <path d="M5 16h8a4 4 0 0 0 3.4-6.1" />
-          <path d="m17 5 2 3-2 3" />
-          <path d="M19 8h-8a4 4 0 0 0-3.4 6.1" />
-        </svg>
-      );
-    case "spark":
-      return (
-        <svg {...common}>
-          <path d="M12 2v5" />
-          <path d="M12 17v5" />
-          <path d="m4.9 4.9 3.5 3.5" />
-          <path d="m15.6 15.6 3.5 3.5" />
-          <path d="M2 12h5" />
-          <path d="M17 12h5" />
-          <path d="m4.9 19.1 3.5-3.5" />
-          <path d="m15.6 8.4 3.5-3.5" />
-        </svg>
-      );
-    case "leaf":
-      return (
-        <svg {...common}>
-          <path d="M4 20c8-2 14-8 16-16-8 1-14 4-17 10 0 3 1 5 1 6z" />
-          <path d="M4 20c3-5 7-8 12-10" />
-        </svg>
-      );
-    default:
-      return null;
-  }
+  return (
+    <Modal title="Ganti Password" onClose={onClose}>
+      <form className="profile-form" onSubmit={handleSubmit}>
+        <PasswordField label="Password Lama" value={currentPassword} onChange={setCurrentPassword} />
+        <PasswordField label="Password Baru" value={newPassword} onChange={setNewPassword} />
+        <PasswordField label="Konfirmasi Password Baru" value={confirmPassword} onChange={setConfirmPassword} />
+        {formError && <div className="status-card error-card auth-error">{formError}</div>}
+        <button className="primary-action" type="submit">
+          Simpan
+        </button>
+      </form>
+    </Modal>
+  );
 }
 
-function createSvgThumb(type) {
-  const svg =
-    type === "plastic"
-      ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#d9f7e6"/><stop offset="1" stop-color="#7ed7a3"/></linearGradient></defs><rect width="320" height="220" rx="28" fill="url(#g)"/><circle cx="250" cy="50" r="34" fill="#fff8ea" opacity=".65"/><path d="M141 46h38v20h-38z" fill="#2f80ed"/><path d="M132 66h56l-7 112c-1 15-12 25-28 25s-27-10-28-25z" fill="#dff4ff" stroke="#176dbd" stroke-width="8"/><path d="M140 101h41M139 129h43M137 157h45" stroke="#85c7ee" stroke-width="8" stroke-linecap="round"/><path d="M62 164c28-47 75-50 112-16 24 21 47 22 83 0" fill="none" stroke="#0b6b43" stroke-width="12" stroke-linecap="round"/><path d="M63 84h46v46H63z" fill="#18b86f" opacity=".22"/></svg>`
-      : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#fff3c4"/><stop offset="1" stop-color="#a4d96c"/></linearGradient></defs><rect width="320" height="220" rx="28" fill="url(#g)"/><circle cx="66" cy="52" r="38" fill="#ffffff" opacity=".55"/><path d="M83 160c26-54 70-85 139-78-8 67-50 105-119 100" fill="#24b46b"/><path d="M109 155c38-27 70-42 110-56" stroke="#0b6b43" stroke-width="9" stroke-linecap="round"/><path d="M66 169h188l-16 30H82z" fill="#8a653a"/><path d="M90 132c22-20 53-20 71 0-22 19-50 20-71 0z" fill="#0f8f55"/><path d="M212 130c-17-21-16-48 3-66 17 22 16 46-3 66z" fill="#2bc77a"/></svg>`;
+function ProfilePhotoModal({ onClose, onSubmit, user }) {
+  const [fileName, setFileName] = useState("");
+  const [previewUrl, setPreviewUrl] = useState(user?.avatar_url || "");
+  const [error, setError] = useState("");
 
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    setError("");
+
+    if (!file) {
+      event.target.value = "";
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("File yang dipilih harus berupa gambar.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      setError("Foto profil maksimal 2MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setFileName(file.name);
+    setPreviewUrl(await fileToDataUrl(file));
+    event.target.value = "";
+  };
+
+  return (
+    <Modal title="Ganti Foto Profil" onClose={onClose}>
+      <form className="profile-form" onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit(previewUrl);
+      }}>
+        <div className="photo-preview">
+          <UserAvatar className="large" name={user?.name} src={previewUrl} />
+          <p>Foto profil maksimal 2MB</p>
+        </div>
+        <label className="photo-picker">
+          <span>Pilih Foto</span>
+          <span className="photo-picker-control">
+            <span className="photo-picker-button">
+              <Icon name="camera" />
+              Pilih Foto
+            </span>
+            <span className="photo-file-name">{fileName || "Belum ada file dipilih"}</span>
+          </span>
+          <input accept="image/*" type="file" onChange={handleFileChange} />
+        </label>
+        {error && <div className="status-card error-card auth-error">{error}</div>}
+        <div className="photo-actions">
+          <button className="primary-action" type="submit">
+            Simpan Foto
+          </button>
+          <button className="secondary-action" type="button" onClick={() => onSubmit("")}>
+            Pakai Avatar
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+
+
+function App() {
+ const [currentUser, setCurrentUser] = useState(() => {
+ const storedUser = localStorage.getItem("ecoscan_user");
+ if (!storedUser) {
+ return null;
+ }
+
+ try {
+ return JSON.parse(storedUser);
+ } catch {
+ localStorage.removeItem("ecoscan_user");
+ return null;
+ }
+ });
+ const [activePage, setActivePage] = useState("home");
+ const [scanMode, setScanMode] = useState("upload");
+ const [selectedFile, setSelectedFile] = useState(null);
+ const [previewUrl, setPreviewUrl] = useState("");
+ const [prediction, setPrediction] = useState(null);
+ const [error, setError] = useState("");
+ const [isLoading, setIsLoading] = useState(false);
+ const [toasts, setToasts] = useState([]);
+ const [cameraStream, setCameraStream] = useState(null);
+ const [cameraFacing, setCameraFacing] = useState("environment");
+ const [historyItems, setHistoryItems] = useState(fallbackHistoryItems);
+ const [historyError, setHistoryError] = useState("");
+ const [userStats, setUserStats] = useState(emptyUserStats);
+ const [challenge, setChallenge] = useState(weeklyChallenge);
+ const [communityItems, setCommunityItems] = useState(() => [
+ ...communityPosts.map(normalizePost),
+ ...communityTips.map(normalizePost),
+ ]);
+ const [leaderboard, setLeaderboard] = useState(leaderboardItems);
+ const [triviaItems, setTriviaItems] = useState(triviaCards);
+ const [notifications, setNotifications] = useState([
+ "Nadia membalas komentar kamu di Tips memilah sampah dapur.",
+ "Tantangan mingguan sudah 60% selesai.",
+ "Kamu mendapat 20 poin dari scan terbaru.",
+ ]);
+ const [language, setLanguage] = useState(() => localStorage.getItem("ecoscan_language") || "id");
+ const [isLightTheme, setIsLightTheme] = useState(() => {
+ return localStorage.getItem("ecoscan_theme") !== "dark";
+ });
+ const videoRef = useRef(null);
+ const previewUrlRef = useRef("");
+ const cameraStreamRef = useRef(null);
+ const isAuthenticated = Boolean(currentUser);
+ useDomTranslation(language);
+
+ const predictionTone = useMemo(() => {
+ return categoryMeta[prediction?.category || prediction?.predicted_class]?.tone || "green";
+ }, [prediction]);
+
+ const confidenceValue =
+ typeof prediction?.confidence === "number"
+ ? Number(((prediction.confidence <= 1 ? prediction.confidence * 100 : prediction.confidence)).toFixed(2))
+ : 0;
+
+ const notify = (message, type = "info") => {
+ setToasts((items) => {
+ const toast = { id: `${Date.now()}-${Math.random()}`, message, type };
+ return [toast, ...items].slice(0, 4);
+ });
+ };
+
+ useEffect(() => {
+ if (!toasts.length) return undefined;
+ const timer = window.setTimeout(() => {
+ setToasts((items) => items.slice(0, -1));
+ }, 3400);
+ return () => window.clearTimeout(timer);
+ }, [toasts]);
+
+ const stopCamera = () => {
+ const stream = cameraStreamRef.current || cameraStream;
+ if (stream) {
+ stream.getTracks().forEach((track) => track.stop());
+ }
+ cameraStreamRef.current = null;
+ setCameraStream(null);
+ };
+
+ const handleAuthenticate = async ({ email, name, password, mode }) => {
+ const response = await fetch(mode === "register" ? REGISTER_URL : LOGIN_URL, {
+ method: "POST",
+ headers: {
+ "Content-Type": "application/json",
+ },
+ body: JSON.stringify({ email, name, password }),
+ });
+ const data = await response.json().catch(() => null);
+
+ if (!response.ok) {
+ throw new Error(data?.detail || "Autentikasi gagal.");
+ }
+
+ localStorage.setItem("ecoscan_user", JSON.stringify(data.user));
+ setCurrentUser(data.user);
+ setActivePage("home");
+ notify(mode === "register" ? "Akun berhasil dibuat." : "Berhasil masuk.", "success");
+ };
+
+ const loadHistory = async (showToast = false) => {
+ try {
+ const url = new URL(HISTORY_URL);
+ url.searchParams.set("limit", "50");
+ if (currentUser?.id) {
+ url.searchParams.set("user_id", currentUser.id);
+ }
+ const response = await fetch(url);
+ const data = await response.json().catch(() => null);
+
+ if (!response.ok) {
+ throw new Error(data?.detail || "Riwayat belum bisa dimuat.");
+ }
+
+ const items = Array.isArray(data?.items) ? data.items.map(mapHistoryItem) : [];
+ setHistoryItems(items);
+ setHistoryError("");
+ if (showToast) notify("Riwayat berhasil diperbarui.", "success");
+ } catch (err) {
+ const message = err instanceof Error ? err.message : "Riwayat belum bisa dimuat.";
+ setHistoryError(message === "Failed to fetch" ? "Backend belum terhubung untuk riwayat." : message);
+ if (showToast) notify("Riwayat gagal dimuat.", "error");
+ }
+ };
+
+ const loadUserStats = async () => {
+ if (!currentUser?.id) {
+ setUserStats(emptyUserStats);
+ return;
+ }
+
+ try {
+ const response = await fetch(`${USER_URL}/${currentUser.id}/stats`);
+ const data = await response.json().catch(() => null);
+ if (!response.ok) throw new Error(data?.detail || "Statistik belum bisa dimuat.");
+ const stats = data?.stats && typeof data.stats === "object" ? data.stats : data;
+ setUserStats({ ...emptyUserStats, ...stats });
+ } catch {
+ setUserStats(emptyUserStats);
+ }
+ };
+
+ const loadCommunityData = async () => {
+ try {
+ const [challengeResponse, postsResponse, leaderboardResponse] = await Promise.all([
+ fetch(COMMUNITY_CHALLENGE_URL),
+ fetch(COMMUNITY_POSTS_URL),
+ fetch(COMMUNITY_LEADERBOARD_URL),
+ ]);
+
+ if (challengeResponse.ok) {
+ const data = await challengeResponse.json();
+ setChallenge(normalizeChallenge(data.challenge));
+ }
+
+ if (postsResponse.ok) {
+ const data = await postsResponse.json();
+ const items = Array.isArray(data.items) ? data.items.map(normalizePost) : [];
+ if (items.length) {
+ setCommunityItems(items);
+ }
+ }
+
+ if (leaderboardResponse.ok) {
+ const data = await leaderboardResponse.json();
+ if (Array.isArray(data.items) && data.items.length) {
+ setLeaderboard(data.items);
+ }
+ }
+ } catch {
+ setCommunityItems((items) => (items.length ? items : [...communityPosts, ...communityTips].map(normalizePost)));
+ }
+ };
+
+ const loadTrivia = async () => {
+ try {
+ const response = await fetch(TRIVIA_URL);
+ const data = await response.json().catch(() => null);
+
+ if (response.ok && Array.isArray(data?.items) && data.items.length) {
+ setTriviaItems(data.items.map(normalizeTrivia));
+ }
+ } catch {
+ setTriviaItems(triviaCards);
+ }
+ };
+
+ useEffect(() => {
+ if (isAuthenticated) {
+ loadHistory();
+ loadUserStats();
+ loadCommunityData();
+ loadTrivia();
+ }
+ }, [isAuthenticated]);
+
+ useEffect(() => {
+ localStorage.setItem("ecoscan_language", language);
+ }, [language]);
+
+ useEffect(() => {
+ localStorage.setItem("ecoscan_theme", isLightTheme ? "light" : "dark");
+ }, [isLightTheme]);
+
+ const handleThemeToggle = (updater) => {
+ const nextValue = typeof updater === "function" ? updater(isLightTheme) : Boolean(updater);
+ setIsLightTheme(nextValue);
+ notify(nextValue ? "Tema light aktif." : "Tema dark aktif.", "info");
+ };
+
+ const handleLanguageChange = (nextLanguage) => {
+ setLanguage(nextLanguage);
+ notify(nextLanguage === "en" ? "Language changed to English." : "Bahasa diubah ke Indonesia.", "success");
+ };
+
+ const handleImageChange = (event) => {
+ const file = event.target.files?.[0];
+
+ setPrediction(null);
+ setError("");
+
+ if (!file) {
+ setSelectedFile(null);
+ setPreviewUrl("");
+ event.target.value = "";
+ return;
+ }
+
+ if (!file.type.startsWith("image/")) {
+ setSelectedFile(null);
+ setPreviewUrl("");
+ setError("File yang dipilih harus berupa gambar.");
+ notify("File yang dipilih harus berupa gambar.", "warning");
+ event.target.value = "";
+ return;
+ }
+
+ if (previewUrl) {
+ URL.revokeObjectURL(previewUrl);
+ }
+
+ setSelectedFile(file);
+ setPreviewUrl(URL.createObjectURL(file));
+ stopCamera();
+ notify("Gambar siap dipindai.", "info");
+ event.target.value = "";
+ };
+
+ const handlePredict = async (fileToPredict = selectedFile) => {
+ if (!fileToPredict) {
+ setError("Pilih atau ambil gambar sampah terlebih dahulu.");
+ return;
+ }
+
+ const formData = new FormData();
+ formData.append("file", fileToPredict);
+ if (currentUser?.id) {
+ formData.append("user_id", currentUser.id);
+ }
+
+ setIsLoading(true);
+ setPrediction(null);
+ setError("");
+
+ try {
+ const response = await fetch(CLASSIFY_URL, {
+ method: "POST",
+ body: formData,
+ });
+
+ const data = await response.json().catch(() => null);
+
+ if (!response.ok) {
+ throw new Error(data?.detail || "Server gagal memproses gambar.");
+ }
+
+ setPrediction(data);
+ await loadHistory();
+ await loadUserStats();
+ notify("Scan berhasil disimpan ke riwayat.", "success");
+ } catch (err) {
+ const message =
+ err instanceof Error ? err.message : "Terjadi kesalahan yang tidak diketahui.";
+
+ setError(
+ message === "Failed to fetch"
+ ? `Gagal terhubung ke server AI. Pastikan FastAPI berjalan di ${API_BASE_URL}.`
+ : message
+ );
+ notify("Scan gagal diproses.", "error");
+ } finally {
+ setIsLoading(false);
+ }
+ };
+
+ const resetScan = () => {
+ if (previewUrl) {
+ URL.revokeObjectURL(previewUrl);
+ }
+ setSelectedFile(null);
+ setPreviewUrl("");
+ setPrediction(null);
+ setError("");
+ stopCamera();
+ notify("Scan aktif sudah direset.", "info");
+ };
+
+ const startCamera = async (facing = cameraFacing) => {
+ if (!navigator.mediaDevices?.getUserMedia) {
+ setError("Browser belum mendukung kamera langsung.");
+ notify("Browser belum mendukung kamera langsung.", "error");
+ return;
+ }
+
+ try {
+ stopCamera();
+ const stream = await navigator.mediaDevices.getUserMedia({
+ video: { facingMode: { ideal: facing } },
+ audio: false,
+ });
+ cameraStreamRef.current = stream;
+ setCameraStream(stream);
+ setCameraFacing(facing);
+ setPreviewUrl("");
+ setSelectedFile(null);
+ setPrediction(null);
+ setError("");
+ notify("Kamera aktif.", "success");
+ } catch {
+ setError("Kamera tidak bisa diakses. Periksa izin kamera browser.");
+ notify("Kamera tidak bisa diakses.", "error");
+ }
+ };
+
+ const captureCameraFrame = async () => {
+ const video = videoRef.current;
+ if (!video || !cameraStream) {
+ notify("Kamera belum siap.", "warning");
+ return;
+ }
+
+ const canvas = document.createElement("canvas");
+ canvas.width = video.videoWidth || 640;
+ canvas.height = video.videoHeight || 640;
+ const context = canvas.getContext("2d");
+ context.drawImage(video, 0, 0, canvas.width, canvas.height);
+ const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+ if (!blob) {
+ notify("Gagal mengambil gambar dari kamera.", "error");
+ return;
+ }
+
+ const file = new File([blob], `camera-scan-${Date.now()}.jpg`, { type: "image/jpeg" });
+ if (previewUrl) URL.revokeObjectURL(previewUrl);
+ setSelectedFile(file);
+ setPreviewUrl(URL.createObjectURL(file));
+ stopCamera();
+ };
+
+ const handlePrimaryScan = (uploadInputRef) => {
+ if (scanMode === "camera") {
+ if (cameraStream) {
+ captureCameraFrame();
+ } else {
+ startCamera(cameraFacing);
+ }
+ return;
+ }
+
+ uploadInputRef.current?.click();
+ };
+
+ const handleSwitchCamera = () => {
+ const nextFacing = cameraFacing === "environment" ? "user" : "environment";
+ startCamera(nextFacing);
+ };
+
+ useEffect(() => {
+ if (selectedFile) {
+ handlePredict(selectedFile);
+ }
+ }, [selectedFile]);
+
+ useEffect(() => {
+ previewUrlRef.current = previewUrl;
+ }, [previewUrl]);
+
+ useEffect(() => {
+ cameraStreamRef.current = cameraStream;
+ }, [cameraStream]);
+
+ useEffect(() => {
+ return () => {
+ if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+ if (cameraStreamRef.current) {
+ cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+ }
+ };
+ }, []);
+
+ if (!isAuthenticated) {
+ return (
+ <>
+ <LoginPage isLightTheme={isLightTheme} onAuthenticate={handleAuthenticate} onThemeToggle={handleThemeToggle} />
+ <ToastStack items={toasts} />
+ </>
+ );
+ }
+
+ const handleLogout = () => {
+ localStorage.removeItem("ecoscan_user");
+ setCurrentUser(null);
+ setActivePage("home");
+ notify("Berhasil logout.", "info");
+ };
+
+ const handleUpdateUser = async (updates) => {
+ const updatedUser = { ...currentUser, ...updates };
+ setCurrentUser(updatedUser);
+ localStorage.setItem("ecoscan_user", JSON.stringify(updatedUser));
+
+ try {
+ const response = await fetch(`${USER_URL}/${currentUser.id}`, {
+ method: "PUT",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify(updates),
+ });
+ const data = await response.json().catch(() => null);
+ if (!response.ok) throw new Error(data?.detail || "Profil gagal diperbarui.");
+ const syncedUser = { ...updatedUser, ...(data?.user || data || {}) };
+ setCurrentUser(syncedUser);
+ localStorage.setItem("ecoscan_user", JSON.stringify(syncedUser));
+ notify("Profil berhasil diperbarui.", "success");
+ } catch {
+ // Data tetap tersimpan lokal saat backend profil belum tersambung.
+ notify("Profil tersimpan lokal, backend belum tersambung.", "warning");
+ }
+ };
+
+ const handlePhotoUpdate = async (avatarUrl) => {
+ await handleUpdateUser({ avatar_url: avatarUrl });
+ };
+
+ const handleChangePassword = async (payload) => {
+ const response = await fetch(`${USER_URL}/${currentUser.id}/password`, {
+ method: "PUT",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify(payload),
+ });
+ const data = await response.json().catch(() => null);
+ if (!response.ok) {
+ const message = data?.detail || "Password gagal diperbarui.";
+ notify(message, "error");
+ throw new Error(message);
+ }
+ notify(data?.message || "Password berhasil diperbarui.", "success");
+ };
+
+ const handleCreatePost = async ({ title, body }) => {
+ const newPost = normalizePost({
+ id: `local-post-${Date.now()}`,
+ author: currentUser?.name || "Eco Warrior",
+ badge: "Anggota",
+ title,
+ body,
+ type: "post",
+ likes: 0,
+ comments: [],
+ createdAt: "Baru saja",
+ });
+
+ setCommunityItems((items) => [newPost, ...items]);
+ notify("Postingan dibuat.", "success");
+
+ try {
+ const response = await fetch(COMMUNITY_POSTS_URL, {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({
+ title,
+ body,
+ author: newPost.author,
+ badge: newPost.badge,
+ user_id: currentUser?.id,
+ }),
+ });
+ const data = await response.json().catch(() => null);
+ if (response.ok && data?.item) {
+ const savedPost = normalizePost(data.item);
+ setCommunityItems((items) => items.map((item) => (item.id === newPost.id ? savedPost : item)));
+ }
+ } catch {
+ // Optimistic UI: postingan lokal tetap tampil.
+ notify("Postingan tampil lokal, belum sinkron ke backend.", "warning");
+ }
+ };
+
+ const handleToggleLike = async (postId) => {
+ const target = communityItems.find((item) => item.id === postId);
+ const nextLiked = !target?.isLiked;
+
+ setCommunityItems((items) =>
+ items.map((item) =>
+ item.id === postId
+ ? { ...item, isLiked: !item.isLiked, likes: Math.max(0, item.likes + (item.isLiked ? -1 : 1)) }
+ : item
+ )
+ );
+
+ try {
+ await fetch(`${COMMUNITY_POSTS_URL}/${postId}/like`, {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ liked: nextLiked }),
+ });
+ } catch {
+ // Like akan disinkronkan ulang saat data komunitas dimuat dari backend.
+ notify("Like tersimpan lokal sementara.", "warning");
+ }
+ };
+
+ const handleAddComment = async (postId, body, parentId = null) => {
+ const newComment = {
+ id: `local-comment-${Date.now()}`,
+ author: currentUser?.name || "Eco Warrior",
+ body,
+ createdAt: "Baru saja",
+ replies: [],
+ };
+
+ setCommunityItems((items) =>
+ items.map((item) => {
+ if (item.id !== postId) return item;
+ if (!parentId) return { ...item, comments: [...item.comments, newComment] };
+
+ return {
+ ...item,
+ comments: item.comments.map((comment) =>
+ comment.id === parentId
+ ? { ...comment, replies: [...(comment.replies || []), newComment] }
+ : comment
+ ),
+ };
+ })
+ );
+ notify(parentId ? "Balasan ditambahkan." : "Komentar ditambahkan.", "success");
+
+ try {
+ const response = await fetch(`${COMMUNITY_POSTS_URL}/${postId}/comments`, {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({
+ body,
+ author: newComment.author,
+ parent_id: parentId,
+ user_id: currentUser?.id,
+ }),
+ });
+ if (response.ok) {
+ loadCommunityData();
+ }
+ } catch {
+ // Komentar lokal tetap digunakan jika backend belum tersedia.
+ notify("Komentar tersimpan lokal sementara.", "warning");
+ }
+ };
+
+ return (
+ <div className={`app-shell ${isLightTheme ? "light-theme" : "dark-theme"}`}>
+ <main className="phone-stage">
+ {activePage === "home" && (
+ <HomePage
+ isLightTheme={isLightTheme}
+ notifications={notifications}
+ onLogout={handleLogout}
+ onNavigate={setActivePage}
+ onThemeToggle={handleThemeToggle}
+ stats={userStats}
+ triviaItems={triviaItems}
+ user={currentUser}
+ />
+ )}
+ {activePage === "history" && (
+ <HistoryPage
+ historyError={historyError}
+ historyItems={historyItems}
+ isLightTheme={isLightTheme}
+ notifications={notifications}
+ onLogout={handleLogout}
+ onNavigate={setActivePage}
+ onRefresh={() => loadHistory(true)}
+ onThemeToggle={handleThemeToggle}
+ user={currentUser}
+ />
+ )}
+ {activePage === "scan" && (
+ <ScanPage
+ cameraFacing={cameraFacing}
+ cameraStream={cameraStream}
+ confidenceValue={confidenceValue}
+ error={error}
+ isLoading={isLoading}
+ isLightTheme={isLightTheme}
+ notifications={notifications}
+ onImageChange={handleImageChange}
+ onLogout={handleLogout}
+ onNavigate={setActivePage}
+ onPrimaryScan={handlePrimaryScan}
+ onReset={resetScan}
+ onSwitchCamera={handleSwitchCamera}
+ onThemeToggle={handleThemeToggle}
+ prediction={prediction}
+ predictionTone={predictionTone}
+ previewUrl={previewUrl}
+ scanMode={scanMode}
+ selectedFile={selectedFile}
+ setScanMode={setScanMode}
+ user={currentUser}
+ videoRef={videoRef}
+ />
+ )}
+ {activePage === "community" && (
+ <CommunityPage
+ challenge={challenge}
+ isLightTheme={isLightTheme}
+ items={communityItems}
+ leaderboard={leaderboard}
+ notifications={notifications}
+ onAddComment={handleAddComment}
+ onCreatePost={handleCreatePost}
+ onLogout={handleLogout}
+ onNavigate={setActivePage}
+ onThemeToggle={handleThemeToggle}
+ onToggleLike={handleToggleLike}
+ user={currentUser}
+ />
+ )}
+ {activePage === "profile" && (
+ <ProfilePage
+ historyItems={historyItems}
+ isLightTheme={isLightTheme}
+ language={language}
+ notifications={notifications}
+ onChangePassword={handleChangePassword}
+ onLanguageChange={handleLanguageChange}
+ onLogout={handleLogout}
+ onNavigate={setActivePage}
+ onPhotoUpdate={handlePhotoUpdate}
+ onThemeToggle={handleThemeToggle}
+ onUpdateUser={handleUpdateUser}
+ stats={userStats}
+ user={currentUser}
+ />
+ )}
+ </main>
+
+ <BottomNavigation activePage={activePage} onNavigate={setActivePage} />
+ <ToastStack items={toasts} />
+ </div>
+ );
 }
 
 export default App;
