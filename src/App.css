@@ -2442,6 +2442,39 @@ padding: 0 18px;
   box-shadow: 0 12px 26px rgba(10, 155, 89, 0.24);
 }
 
+.app-shell.dark-theme .modal-panel {
+  color: #f8fff9;
+}
+
+.app-shell.dark-theme .modal-panel .modal-header h2,
+.app-shell.dark-theme .modal-panel .post-author strong,
+.app-shell.dark-theme .modal-panel .comment-section h3,
+.app-shell.dark-theme .modal-panel .comment-item strong,
+.app-shell.dark-theme .modal-panel .faq-list h3 {
+  color: #f8fff9;
+}
+
+.app-shell.dark-theme .modal-panel .modal-copy,
+.app-shell.dark-theme .modal-panel .detail-actions,
+.app-shell.dark-theme .modal-panel .detail-actions span,
+.app-shell.dark-theme .modal-panel .post-author span,
+.app-shell.dark-theme .modal-panel .comment-item p,
+.app-shell.dark-theme .modal-panel .notification-item p,
+.app-shell.dark-theme .modal-panel .faq-list p {
+  color: #c8d9ce;
+}
+
+.app-shell.dark-theme .modal-panel .comment-item span,
+.app-shell.dark-theme .modal-panel .empty-copy {
+  color: #aebfb4;
+}
+
+.app-shell.dark-theme .modal-panel .detail-actions button,
+.app-shell.dark-theme .modal-panel .comment-item button,
+.app-shell.dark-theme .modal-panel .reply-context {
+  color: #35d989;
+}
+
 .profile-form label {
   display: grid;
   gap: 7px;

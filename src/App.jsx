@@ -1953,32 +1953,33 @@ function ProfilePage({
 
       <section className="settings-list">
         <button type="button" onClick={() => setActivePanel("edit")}>
-          <span>Edit Profil</span>
+          <span>{translateText("Edit Profil", language)}</span>
           <ChevronRight className="settings-chevron" aria-hidden="true" />
         </button>
         <button type="button" onClick={() => setActivePanel("password")}>
-          <span>Ganti Password</span>
+          <span>{translateText("Ganti Password", language)}</span>
           <ChevronRight className="settings-chevron" aria-hidden="true" />
         </button>
         <button type="button" onClick={() => setActivePanel("notifications")}>
-          <span>Notifikasi</span>
+          <span>{translateText("Notifikasi", language)}</span>
           <strong>{notifications.length}</strong>
         </button>
         <button type="button" onClick={() => setActivePanel("language")}>
           <span>{language === "en" ? "English" : "Bahasa Indonesia"}</span>
-          <strong>Aktif</strong>
+          <strong>{translateText("Aktif", language)}</strong>
         </button>
         <button type="button" onClick={() => setActivePanel("help")}>
-          <span>Bantuan</span>
+          <span>{translateText("Bantuan", language)}</span>
           <ChevronRight className="settings-chevron" aria-hidden="true" />
         </button>
         <button className="logout-button" type="button" onClick={onLogout}>
-          Logout
+          {translateText("Logout", language)}
         </button>
       </section>
 
       {activePanel === "edit" && (
         <EditProfileModal
+          language={language}
           onClose={() => setActivePanel(null)}
           onSubmit={(updates) => {
             onUpdateUser(updates);
@@ -1989,6 +1990,7 @@ function ProfilePage({
       )}
       {activePanel === "password" && (
         <ChangePasswordModal
+          language={language}
           onClose={() => setActivePanel(null)}
           onSubmit={async (payload) => {
             await onChangePassword(payload);
@@ -1998,6 +2000,7 @@ function ProfilePage({
       )}
       {activePanel === "photo" && (
         <ProfilePhotoModal
+          language={language}
           onClose={() => setActivePanel(null)}
           onSubmit={async (avatarUrl) => {
             await onPhotoUpdate(avatarUrl);
@@ -2007,19 +2010,23 @@ function ProfilePage({
         />
       )}
       {activePanel === "notifications" && (
-        <Modal title="Notifikasi" onClose={() => setActivePanel(null)}>
-          <div className="notification-list">
-            {notifications.map((item) => (
-              <article className="notification-item" key={item}>
-                <Icon name="bell" />
-                <p>{item}</p>
-              </article>
-            ))}
-          </div>
+        <Modal title={translateText("Notifikasi", language)} onClose={() => setActivePanel(null)}>
+          {notifications.length > 0 ? (
+            <div className="notification-list">
+              {notifications.map((item) => (
+                <article className="notification-item" key={item}>
+                  <Icon name="bell" />
+                  <p>{translateText(item, language)}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="status-card empty-card">{translateText("Belum ada notifikasi.", language)}</div>
+          )}
         </Modal>
       )}
       {activePanel === "language" && (
-        <Modal title="Bahasa" onClose={() => setActivePanel(null)}>
+        <Modal title={translateText("Bahasa", language)} onClose={() => setActivePanel(null)}>
           <div className="option-list">
             <button
               className={language === "id" ? "active" : ""}
@@ -2029,7 +2036,7 @@ function ProfilePage({
                 setActivePanel(null);
               }}
             >
-              Bahasa Indonesia
+              {translateText("Bahasa Indonesia", language)}
             </button>
             <button
               className={language === "en" ? "active" : ""}
@@ -2045,19 +2052,19 @@ function ProfilePage({
         </Modal>
       )}
       {activePanel === "help" && (
-        <Modal title="Pusat Bantuan" onClose={() => setActivePanel(null)}>
+        <Modal title={translateText("Pusat Bantuan", language)} onClose={() => setActivePanel(null)}>
           <div className="faq-list">
             <article>
-              <h3>Bagaimana cara scan sampah?</h3>
-              <p>Buka menu Scan, unggah gambar atau ambil foto, lalu tunggu hasil klasifikasi AI.</p>
+              <h3>{translateText("Bagaimana cara scan sampah?", language)}</h3>
+              <p>{translateText("Buka menu Scan, unggah gambar atau ambil foto, lalu tunggu hasil klasifikasi AI.", language)}</p>
             </article>
             <article>
-              <h3>Kenapa hasil scan tidak tersimpan?</h3>
-              <p>Jika hasil scan belum tersimpan, coba periksa koneksi internet lalu ulangi proses scan.</p>
+              <h3>{translateText("Kenapa hasil scan tidak tersimpan?", language)}</h3>
+              <p>{translateText("Jika hasil scan belum tersimpan, coba periksa koneksi internet lalu ulangi proses scan.", language)}</p>
             </article>
             <article>
-              <h3>Kontak bantuan</h3>
-              <p>Kirim laporan ke support@ecoscan.my.id dengan screenshot masalah yang kamu temui.</p>
+              <h3>{translateText("Kontak bantuan", language)}</h3>
+              <p>{translateText("Kirim laporan ke support@ecoscan.my.id dengan screenshot masalah yang kamu temui.", language)}</p>
             </article>
           </div>
         </Modal>
@@ -2066,7 +2073,7 @@ function ProfilePage({
   );
 }
 
-function EditProfileModal({ onClose, onSubmit, user }) {
+function EditProfileModal({ language = "id", onClose, onSubmit, user }) {
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
 
@@ -2076,30 +2083,32 @@ function EditProfileModal({ onClose, onSubmit, user }) {
   };
 
   return (
-    <Modal title="Edit Profil" onClose={onClose}>
+    <Modal title={translateText("Edit Profil", language)} onClose={onClose}>
       <form className="profile-form" onSubmit={handleSubmit}>
         <label>
-          Nama
+          {translateText("Nama", language)}
           <input type="text" value={name} onChange={(event) => setName(event.target.value)} required />
         </label>
         <label>
-          Email
+          {translateText("Email", language)}
           <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </label>
         <button className="primary-action" type="submit">
-          Simpan
+          {translateText("Simpan", language)}
         </button>
       </form>
     </Modal>
   );
 }
 
-function PasswordField({ label, value, onChange }) {
+function PasswordField({ label, language = "id", value, onChange }) {
   const [isVisible, setIsVisible] = useState(false);
+  const translatedLabel = translateText(label, language);
+  const visibilityLabel = translateText(isVisible ? "Sembunyikan password" : "Tampilkan password", language);
 
   return (
     <label>
-      {label}
+      {translatedLabel}
       <span className="password-field">
         <Icon name="lock" />
         <input
@@ -2108,9 +2117,9 @@ function PasswordField({ label, value, onChange }) {
           onChange={(event) => onChange(event.target.value)}
           minLength={6}
           required
-          placeholder={label}
+          placeholder={translatedLabel}
         />
-        <button type="button" aria-label={isVisible ? "Sembunyikan password" : "Tampilkan password"} onClick={() => setIsVisible((value) => !value)}>
+        <button type="button" aria-label={visibilityLabel} onClick={() => setIsVisible((value) => !value)}>
           <Icon name={isVisible ? "eye" : "eye-off"} />
         </button>
       </span>
@@ -2118,7 +2127,7 @@ function PasswordField({ label, value, onChange }) {
   );
 }
 
-function ChangePasswordModal({ onClose, onSubmit }) {
+function ChangePasswordModal({ language = "id", onClose, onSubmit }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -2140,21 +2149,21 @@ function ChangePasswordModal({ onClose, onSubmit }) {
   };
 
   return (
-    <Modal title="Ganti Password" onClose={onClose}>
+    <Modal title={translateText("Ganti Password", language)} onClose={onClose}>
       <form className="profile-form" onSubmit={handleSubmit}>
-        <PasswordField label="Password Lama" value={currentPassword} onChange={setCurrentPassword} />
-        <PasswordField label="Password Baru" value={newPassword} onChange={setNewPassword} />
-        <PasswordField label="Konfirmasi Password Baru" value={confirmPassword} onChange={setConfirmPassword} />
-        {formError && <div className="status-card error-card auth-error">{formError}</div>}
+        <PasswordField label="Password Lama" language={language} value={currentPassword} onChange={setCurrentPassword} />
+        <PasswordField label="Password Baru" language={language} value={newPassword} onChange={setNewPassword} />
+        <PasswordField label="Konfirmasi Password Baru" language={language} value={confirmPassword} onChange={setConfirmPassword} />
+        {formError && <div className="status-card error-card auth-error">{translateText(formError, language)}</div>}
         <button className="primary-action" type="submit">
-          Simpan
+          {translateText("Simpan", language)}
         </button>
       </form>
     </Modal>
   );
 }
 
-function ProfilePhotoModal({ onClose, onSubmit, user }) {
+function ProfilePhotoModal({ language = "id", onClose, onSubmit, user }) {
   const [fileName, setFileName] = useState("");
   const [previewUrl, setPreviewUrl] = useState(user?.avatar_url || "");
   const [error, setError] = useState("");
@@ -2184,33 +2193,33 @@ function ProfilePhotoModal({ onClose, onSubmit, user }) {
   };
 
   return (
-    <Modal title="Ganti Foto Profil" onClose={onClose}>
+    <Modal title={translateText("Ganti Foto Profil", language)} onClose={onClose}>
       <form className="profile-form" onSubmit={(event) => {
         event.preventDefault();
         onSubmit(previewUrl);
       }}>
         <div className="photo-preview">
           <UserAvatar className="large" name={user?.name} src={previewUrl} />
-          <p>Foto profil maksimal 2MB</p>
+          <p>{translateText("Foto profil maksimal 2MB", language)}</p>
         </div>
         <label className="photo-picker">
-          <span>Pilih Foto</span>
+          <span>{translateText("Pilih Foto", language)}</span>
           <span className="photo-picker-control">
             <span className="photo-picker-button">
               <Icon name="camera" />
-              Pilih Foto
+              {translateText("Pilih Foto", language)}
             </span>
-            <span className="photo-file-name">{fileName || "Belum ada file dipilih"}</span>
+            <span className="photo-file-name">{fileName || translateText("Belum ada file dipilih", language)}</span>
           </span>
           <input accept="image/*" type="file" onChange={handleFileChange} />
         </label>
-        {error && <div className="status-card error-card auth-error">{error}</div>}
+        {error && <div className="status-card error-card auth-error">{translateText(error, language)}</div>}
         <div className="photo-actions">
           <button className="primary-action" type="submit">
-            Simpan Foto
+            {translateText("Simpan Foto", language)}
           </button>
           <button className="secondary-action" type="button" onClick={() => onSubmit("")}>
-            Pakai Avatar
+            {translateText("Pakai Avatar", language)}
           </button>
         </div>
       </form>
