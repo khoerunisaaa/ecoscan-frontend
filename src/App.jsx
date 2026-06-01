@@ -108,9 +108,9 @@ const textTranslations = {
   "Bagaimana cara scan sampah?": "How do I scan waste?",
   "Buka menu Scan, unggah gambar atau ambil foto, lalu tunggu hasil klasifikasi AI.": "Open Scan, upload or capture a photo, then wait for the AI classification.",
   "Kenapa hasil scan tidak tersimpan?": "Why is my scan result not saved?",
-  "Pastikan backend FastAPI aktif dan konfigurasi Supabase sudah benar.": "Make sure the FastAPI backend is running and Supabase is configured correctly.",
+  "Jika hasil scan belum tersimpan, coba periksa koneksi internet lalu ulangi proses scan.": "If your scan result has not been saved, check your internet connection and try scanning again.",
   "Kontak bantuan": "Support contact",
-  "Kirim laporan ke support@ecoscan.local dengan screenshot masalah yang kamu temui.": "Send a report to support@ecoscan.local with a screenshot of the issue.",
+  "Kirim laporan ke support@ecoscan.my.id dengan screenshot masalah yang kamu temui.": "Send a report to support@ecoscan.my.id with a screenshot of the issue.",
   "Fakta Daur Ulang": "Recycling Facts",
   "Botol plastik PET sebaiknya dicuci, dikeringkan, lalu disetor ke bank sampah.": "PET plastic bottles should be washed, dried, then sent to a waste bank.",
   "Botol PET yang bersih lebih mudah diterima bank sampah karena tidak mencemari material lain. Lepaskan label bila memungkinkan, pipihkan botol untuk menghemat ruang, lalu kumpulkan berdasarkan jenis plastik.": "Clean PET bottles are easier for waste banks to accept because they do not contaminate other materials. Remove labels when possible, flatten bottles to save space, then sort by plastic type.",
@@ -154,6 +154,7 @@ const textTranslations = {
   "MobileNetV2 Transfer Learning": "MobileNetV2 Transfer Learning",
   "Model ini membantu mengenali jenis sampah dari foto dengan cepat, sehingga pengguna bisa langsung memilah, menyetor, atau mengolah sampah sesuai kategori.": "This model helps identify waste types from photos quickly, so users can sort, drop off, or process waste according to its category.",
   "Ringan untuk aplikasi web, cepat membaca gambar, dan cukup stabil membedakan pola visual sampah agar hasil scan bisa langsung dipakai untuk memilah dengan tepat.": "Lightweight for web apps, quick at reading images, and stable enough to distinguish waste visual patterns so scan results can be used for sorting right away.",
+  "Organik • Anorganik • B3 • Kertas • Residu": "Organic • Inorganic • Hazardous • Paper • Residual",
   "Organik • Organik • Anorganik • B3 • Kertas • Residu": "Organic • Organic • Inorganic • Hazardous • Paper • Residual",
   "Organik": "Organic",
   "Anorganik": "Inorganic",
@@ -1176,7 +1177,7 @@ function HomePage({ isLightTheme, notifications, onLogout, onNavigate, onThemeTo
           <div>
             <small>AKURASI</small>
             <strong>93%</strong>
-            <p className="model-class-list">Organik &bull; Organik &bull; Anorganik &bull; B3 &bull; Kertas &bull; Residu</p>
+            <p className="model-class-list">Organik &bull; Anorganik &bull; B3 &bull; Kertas &bull; Residu</p>
           </div>
           <div>
             <small>Kenapa Model Ini?</small>
@@ -1977,11 +1978,11 @@ function ProfilePage({
             </article>
             <article>
               <h3>Kenapa hasil scan tidak tersimpan?</h3>
-              <p>Pastikan backend FastAPI aktif dan konfigurasi Supabase sudah benar.</p>
+              <p>Jika hasil scan belum tersimpan, coba periksa koneksi internet lalu ulangi proses scan.</p>
             </article>
             <article>
               <h3>Kontak bantuan</h3>
-              <p>Kirim laporan ke support@ecoscan.local dengan screenshot masalah yang kamu temui.</p>
+              <p>Kirim laporan ke support@ecoscan.my.id dengan screenshot masalah yang kamu temui.</p>
             </article>
           </div>
         </Modal>
