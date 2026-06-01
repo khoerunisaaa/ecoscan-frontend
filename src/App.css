@@ -2032,6 +2032,10 @@ padding: 0 18px;
   font-weight: 900;
 }
 
+.app-shell.dark-theme .history-item small {
+  color: #f8fff9;
+}
+
 .history-pagination {
   display: grid;
   grid-template-columns: 42px minmax(74px, auto) 42px;

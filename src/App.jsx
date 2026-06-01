@@ -62,6 +62,7 @@ const textTranslations = {
   "Buat Post": "Create Post",
   "Belum ada postingan yang cocok.": "No matching posts yet.",
   "Tips tidak ditemukan.": "No tips found.",
+  "Cari tips, pengguna, atau topik...": "Search tips, users, or topics...",
   "suka": "likes",
   "komentar": "comments",
   "Disukai": "Liked",
@@ -70,6 +71,8 @@ const textTranslations = {
   "Belum ada komentar.": "No comments yet.",
   "Balas": "Reply",
   "Batalkan balasan": "Cancel reply",
+  "Tulis balasan...": "Write a reply...",
+  "Tulis komentar...": "Write a comment...",
   "Kirim": "Send",
   "Edit Profil": "Edit Profile",
   "Ganti Password": "Change Password",
@@ -105,6 +108,10 @@ const textTranslations = {
   "Poin": "Points",
   "Streak": "Streak",
   "Riwayat Scan": "Scan History",
+  "Botol Plastik PET": "PET Plastic Bottle",
+  "Sisa Makanan": "Food Waste",
+  "Kertas Kemasan": "Packaging Paper",
+  "Scan sampah": "Waste scan",
   "Bagaimana cara scan sampah?": "How do I scan waste?",
   "Buka menu Scan, unggah gambar atau ambil foto, lalu tunggu hasil klasifikasi AI.": "Open Scan, upload or capture a photo, then wait for the AI classification.",
   "Kenapa hasil scan tidak tersimpan?": "Why is my scan result not saved?",
@@ -129,8 +136,11 @@ const textTranslations = {
   "Kumpulkan scan plastik bersih minggu ini dan bagikan tips pemilahanmu.": "Collect clean plastic scans this week and share your sorting tips.",
   "Tips memilah sampah dapur": "Kitchen Waste Sorting Tips",
   "Pisahkan kulit buah dan sisa sayur sejak awal. Wadah kecil di dekat meja masak bikin kebiasaan ini lebih gampang.": "Separate fruit peels and vegetable scraps from the start. A small bin near the cooking table makes the habit easier.",
+  "Aku pakai wadah bekas es krim, ternyata praktis banget.": "I use an old ice cream container, and it is surprisingly practical.",
+  "Tipsnya membantu buat mulai kompos di rumah.": "The tips help me start composting at home.",
   "Jadwal setor plastik minggu ini": "Plastic Drop-off Schedule This Week",
   "Cuci dan keringkan botol plastik sebelum disetor supaya nilainya lebih tinggi.": "Wash and dry plastic bottles before dropping them off so they have better value.",
+  "Bank sampah dekat rumahku juga minta botol dipipihkan.": "The waste bank near my house also asks for bottles to be flattened.",
   "Mulai dari 3 kategori": "Start with 3 Categories",
   "Untuk pemula, pisahkan organik, anorganik, dan residu lebih dulu agar rutinitasnya mudah dijaga.": "For beginners, separate organic, inorganic, and residual waste first so the routine is easier to maintain.",
   "Keringkan plastik sebelum disetor": "Dry Plastic Before Drop-off",
@@ -143,11 +153,17 @@ const textTranslations = {
   "Anggota": "Member",
   "Panduan": "Guide",
   "Bank Sampah": "Waste Bank",
+  "Eco Mentor": "Eco Mentor",
+  "Eco Guardian": "Eco Guardian",
+  "Eco Ranger": "Eco Ranger",
+  "Eco Learner": "Eco Learner",
+  "Eco Starter": "Eco Starter",
+  "Postingan komunitas": "Community post",
   "Minggu ini": "This week",
   "Hari ini": "Today",
   "Kemarin": "Yesterday",
   "Baru saja": "Just now",
-  "selesai": "done",
+  "selesai": "completed",
   "poin": "points",
   "MODEL AI": "AI MODEL",
   "AKURASI": "ACCURACY",
@@ -213,6 +229,18 @@ const textTranslations = {
   "Password berhasil diperbarui.": "Password updated successfully.",
   "File yang dipilih harus berupa gambar.": "Selected file must be an image.",
   "Foto profil maksimal 2MB.": "Profile photo maximum is 2MB.",
+  "Tutup": "Close",
+  "Navigasi utama": "Main navigation",
+  "Ganti tema": "Change theme",
+  "Ganti foto profil": "Change profile photo",
+  "Ganti Foto Profil": "Change Profile Photo",
+  "Belum ada notifikasi.": "No notifications yet.",
+  "Nadia membalas komentar kamu di Tips memilah sampah dapur.": "Nadia replied to your comment on Kitchen Waste Sorting Tips.",
+  "Tantangan mingguan sudah 60% selesai.": "The weekly challenge is 60% complete.",
+  "Kamu mendapat 20 poin dari scan terbaru.": "You earned 20 points from your latest scan.",
+  "Sembunyikan password": "Hide password",
+  "Tampilkan password": "Show password",
+  "Konfirmasi password baru belum sama.": "New password confirmation does not match.",
 };
 
 const reverseTextTranslations = Object.fromEntries(
@@ -554,6 +582,40 @@ function translateText(value, language) {
   return reverseTextTranslations[value] || value;
 }
 
+function translateRelativeTime(value, language) {
+  if (typeof value === "string" && (/^\d{4}-\d{2}-\d{2}/.test(value) || value.includes("T"))) {
+    const parsedDate = new Date(value);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return translateRelativeTime(formatRelativeTime(value), language);
+    }
+  }
+
+  const translated = translateText(value, language);
+  if (translated !== value) return translated;
+  if (language !== "en" || typeof value !== "string") return value;
+
+  const patterns = [
+    [/^(\d+)\s+menit lalu$/i, "minute"],
+    [/^(\d+)\s+jam lalu$/i, "hour"],
+    [/^(\d+)\s+hari lalu$/i, "day"],
+  ];
+
+  for (const [pattern, unit] of patterns) {
+    const match = value.match(pattern);
+    if (match) {
+      const amount = Number(match[1]);
+      return `${amount} ${unit}${amount === 1 ? "" : "s"} ago`;
+    }
+  }
+
+  return value;
+}
+
+function translateCommunityMetric(count, singularId, pluralEn, language) {
+  if (language !== "en") return `${count} ${singularId}`;
+  return `${count} ${count === 1 ? translateText(singularId, language).replace(/s$/, "") : pluralEn}`;
+}
+
 function useDomTranslation(language) {
   useEffect(() => {
     const root = document.getElementById("root");
@@ -675,6 +737,7 @@ function TopBar({
   compact = false,
   user = null,
   isLightTheme = true,
+  language = "id",
   notifications = [],
   onNavigate = null,
   onLogout = null,
@@ -691,8 +754,8 @@ function TopBar({
   return (
     <header className={`top-bar ${compact ? "compact" : ""}`}>
       <div>
-        <h1>{title}</h1>
-        {subtitle && <p>{subtitle}</p>}
+        <h1>{translateText(title, language)}</h1>
+        {subtitle && <p>{translateText(subtitle, language)}</p>}
       </div>
       <div className="top-actions">
         <button type="button" aria-label="Notifikasi" onClick={() => setIsNotificationOpen(true)}>
@@ -717,7 +780,7 @@ function TopBar({
             <div className="account-menu">
               <button type="button" onClick={() => handleAccountClick("profile")}>
                 <Icon name="user" />
-                Akun
+                {translateText("Akun", language)}
               </button>
               <button
                 type="button"
@@ -727,25 +790,25 @@ function TopBar({
                 }}
               >
                 <Icon name="logout" />
-                Logout
+                {translateText("Logout", language)}
               </button>
             </div>
           )}
         </div>
       </div>
       {isNotificationOpen && (
-        <Modal title="Notifikasi" onClose={() => setIsNotificationOpen(false)}>
+        <Modal title={translateText("Notifikasi", language)} onClose={() => setIsNotificationOpen(false)}>
           {notifications.length > 0 ? (
             <div className="notification-list">
               {notifications.map((item) => (
                 <article className="notification-item" key={item}>
                   <Icon name="bell" />
-                  <p>{item}</p>
+                  <p>{translateText(item, language)}</p>
                 </article>
               ))}
             </div>
           ) : (
-            <div className="status-card empty-card">Belum ada notifikasi.</div>
+            <div className="status-card empty-card">{translateText("Belum ada notifikasi.", language)}</div>
           )}
         </Modal>
       )}
@@ -1152,6 +1215,7 @@ function HomePage({ isLightTheme, language, notifications, onLogout, onNavigate,
         subtitle="Selamat datang kembali"
         user={user}
         isLightTheme={isLightTheme}
+        language={language}
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
@@ -1252,7 +1316,7 @@ function HomePage({ isLightTheme, language, notifications, onLogout, onNavigate,
 
 
 
-function HistoryPage({ historyError, historyItems, isLightTheme, notifications, onLogout, onNavigate, onRefresh, onThemeToggle, user }) {
+function HistoryPage({ historyError, historyItems, isLightTheme, language, notifications, onLogout, onNavigate, onRefresh, onThemeToggle, user }) {
   return (
     <section className="page-content">
       <TopBar
@@ -1260,6 +1324,7 @@ function HistoryPage({ historyError, historyItems, isLightTheme, notifications, 
         subtitle="Aktivitas scan terbaru"
         user={user}
         isLightTheme={isLightTheme}
+        language={language}
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
@@ -1273,12 +1338,12 @@ function HistoryPage({ historyError, historyItems, isLightTheme, notifications, 
           </button>
         </div>
       )}
-      <HistoryList items={historyItems} />
+      <HistoryList items={historyItems} language={language} />
     </section>
   );
 }
 
-function HistoryList({ items }) {
+function HistoryList({ items, language = "id" }) {
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(items.length / HISTORY_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -1298,12 +1363,12 @@ function HistoryList({ items }) {
         {visibleItems.map((item) => (
           <article className="history-item" key={item.id || `${item.name}-${item.time}`}>
             <div className="history-copy">
-              <strong>{item.name}</strong>
-              <span>{item.time}</span>
+              <strong>{translateText(item.name, language)}</strong>
+              <span>{translateRelativeTime(item.time, language)}</span>
             </div>
             <div className="history-meta">
               <span className={`category-badge ${categoryMeta[item.category]?.tone || "green"}`}>
-                {item.category}
+                {translateText(item.category, language)}
               </span>
               <small>{item.confidence}%</small>
             </div>
@@ -1337,6 +1402,7 @@ function ScanPage({
   error,
   isLoading,
   isLightTheme,
+  language = "id",
   onImageChange,
   onPrimaryScan,
   onReset,
@@ -1377,6 +1443,7 @@ function ScanPage({
         compact
         user={user}
         isLightTheme={isLightTheme}
+        language={language}
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
@@ -1513,7 +1580,7 @@ function ScanPage({
 
 
 
-function CommunityPage({ challenge, isLightTheme, items, leaderboard, notifications, onAddComment, onCreatePost, onLogout, onNavigate, onThemeToggle, onToggleLike, user }) {
+function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, notifications, onAddComment, onCreatePost, onLogout, onNavigate, onThemeToggle, onToggleLike, user }) {
   const [activeTab, setActiveTab] = useState("feed");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPost, setSelectedPost] = useState(null);
@@ -1541,6 +1608,7 @@ function CommunityPage({ challenge, isLightTheme, items, leaderboard, notificati
         subtitle="Belajar dan bergerak bersama"
         user={user}
         isLightTheme={isLightTheme}
+        language={language}
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
@@ -1551,7 +1619,7 @@ function CommunityPage({ challenge, isLightTheme, items, leaderboard, notificati
         <Icon name="search" />
         <input
           type="search"
-          placeholder="Cari tips, pengguna, atau topik..."
+          placeholder={translateText("Cari tips, pengguna, atau topik...", language)}
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
@@ -1585,18 +1653,20 @@ function CommunityPage({ challenge, isLightTheme, items, leaderboard, notificati
         <CommunityFeed
           challenge={challenge}
           items={feedItems}
+          language={language}
           onCreatePost={onCreatePost}
           onOpenPost={setSelectedPost}
           onToggleLike={onToggleLike}
         />
       )}
       {activeTab === "tips" && (
-        <CommunityTips items={tipItems} onOpenPost={setSelectedPost} onToggleLike={onToggleLike} />
+        <CommunityTips items={tipItems} language={language} onOpenPost={setSelectedPost} onToggleLike={onToggleLike} />
       )}
-      {activeTab === "leaderboard" && <CommunityLeaderboard items={filteredLeaderboard} />}
+      {activeTab === "leaderboard" && <CommunityLeaderboard items={filteredLeaderboard} language={language} />}
 
       {selectedPostData && (
         <PostDetailModal
+          language={language}
           onAddComment={onAddComment}
           onClose={() => setSelectedPost(null)}
           onToggleLike={onToggleLike}
@@ -1607,36 +1677,36 @@ function CommunityPage({ challenge, isLightTheme, items, leaderboard, notificati
   );
 }
 
-function CommunityFeed({ challenge, items, onCreatePost, onOpenPost, onToggleLike }) {
+function CommunityFeed({ challenge, items, language = "id", onCreatePost, onOpenPost, onToggleLike }) {
   const progress = challenge.target > 0 ? Math.min(100, Math.round((challenge.current / challenge.target) * 100)) : 0;
 
   return (
     <>
       <section className="challenge-card">
-        <span>Tantangan Minggu Ini</span>
-        <h2>{challenge.title}</h2>
-        <p>{challenge.description}</p>
+        <span>{translateText("Tantangan Minggu Ini", language)}</span>
+        <h2>{translateText(challenge.title, language)}</h2>
+        <p>{translateText(challenge.description, language)}</p>
         <div className="confidence-track">
           <span style={{ width: `${progress}%` }} />
         </div>
         <p>
-          {challenge.current}/{challenge.target} selesai · {challenge.reward} poin · {challenge.endsAt}
+          {challenge.current}/{challenge.target} {translateText("selesai", language)} · {challenge.reward} {translateText("poin", language)} · {translateRelativeTime(challenge.endsAt, language)}
         </p>
       </section>
 
-      <CreatePostForm onCreatePost={onCreatePost} />
+      <CreatePostForm language={language} onCreatePost={onCreatePost} />
 
       <section className="post-list">
-        {items.length === 0 && <div className="status-card empty-card">Belum ada postingan yang cocok.</div>}
+        {items.length === 0 && <div className="status-card empty-card">{translateText("Belum ada postingan yang cocok.", language)}</div>}
         {items.map((post) => (
-          <PostCard key={post.id} onOpenPost={onOpenPost} onToggleLike={onToggleLike} post={post} />
+          <PostCard key={post.id} language={language} onOpenPost={onOpenPost} onToggleLike={onToggleLike} post={post} />
         ))}
       </section>
     </>
   );
 }
 
-function CreatePostForm({ onCreatePost }) {
+function CreatePostForm({ language = "id", onCreatePost }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
 
@@ -1652,24 +1722,24 @@ function CreatePostForm({ onCreatePost }) {
     <form className="create-post-form" onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Judul tips atau cerita"
+        placeholder={translateText("Judul tips atau cerita", language)}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
       />
       <textarea
-        placeholder="Bagikan pengalaman, tips, atau info komunitas..."
+        placeholder={translateText("Bagikan pengalaman, tips, atau info komunitas...", language)}
         value={body}
         onChange={(event) => setBody(event.target.value)}
         rows="3"
       />
       <button className="primary-action" type="submit">
-        Buat Post
+        {translateText("Buat Post", language)}
       </button>
     </form>
   );
 }
 
-function PostCard({ post, onOpenPost, onToggleLike }) {
+function PostCard({ post, language = "id", onOpenPost, onToggleLike }) {
   return (
     <article className="post-card">
       <button className="post-main" type="button" onClick={() => onOpenPost(post)}>
@@ -1678,38 +1748,38 @@ function PostCard({ post, onOpenPost, onToggleLike }) {
           <div>
             <strong>{post.author}</strong>
             <span>
-              {post.badge} · {post.createdAt}
+              {translateText(post.badge, language)} · {translateRelativeTime(post.createdAt, language)}
             </span>
           </div>
         </div>
-        {post.tag && <span className="tip-tag">{post.tag}</span>}
-        <h3>{post.title}</h3>
-        <p>{post.body}</p>
+        {post.tag && <span className="tip-tag">{translateText(post.tag, language)}</span>}
+        <h3>{translateText(post.title, language)}</h3>
+        <p>{translateText(post.body, language)}</p>
       </button>
       <div className="post-actions">
         <span>
-          {post.likes} suka · {post.comments.length} komentar
+          {translateCommunityMetric(post.likes, "suka", "likes", language)} · {translateCommunityMetric(post.comments.length, "komentar", "comments", language)}
         </span>
         <button type="button" onClick={() => onToggleLike(post.id)}>
-          {post.isLiked ? "Disukai" : "Like"}
+          {translateText(post.isLiked ? "Disukai" : "Like", language)}
         </button>
       </div>
     </article>
   );
 }
 
-function CommunityTips({ items, onOpenPost, onToggleLike }) {
+function CommunityTips({ items, language = "id", onOpenPost, onToggleLike }) {
   return (
     <section className="tips-list">
-      {items.length === 0 && <div className="status-card empty-card">Tips tidak ditemukan.</div>}
+      {items.length === 0 && <div className="status-card empty-card">{translateText("Tips tidak ditemukan.", language)}</div>}
       {items.map((tip) => (
-        <PostCard key={tip.id} onOpenPost={onOpenPost} onToggleLike={onToggleLike} post={tip} />
+        <PostCard key={tip.id} language={language} onOpenPost={onOpenPost} onToggleLike={onToggleLike} post={tip} />
       ))}
     </section>
   );
 }
 
-function CommunityLeaderboard({ items }) {
+function CommunityLeaderboard({ items, language = "id" }) {
   return (
     <section className="leaderboard-list">
       {items.map((item, index) => (
@@ -1719,8 +1789,8 @@ function CommunityLeaderboard({ items }) {
           <div>
             <h3>{item.name}</h3>
             <p>
-              <span>{item.level_title || "Eco Starter"}</span>
-              <small>{item.scans} total scan</small>
+              <span>{translateText(item.level_title || "Eco Starter", language)}</span>
+              <small>{item.scans} {translateText("total scan", language)}</small>
             </p>
           </div>
           <strong>{item.points}</strong>
@@ -1730,7 +1800,7 @@ function CommunityLeaderboard({ items }) {
   );
 }
 
-function PostDetailModal({ post, onAddComment, onClose, onToggleLike }) {
+function PostDetailModal({ post, language = "id", onAddComment, onClose, onToggleLike }) {
   const [commentBody, setCommentBody] = useState("");
   const [replyTo, setReplyTo] = useState(null);
 
@@ -1743,41 +1813,41 @@ function PostDetailModal({ post, onAddComment, onClose, onToggleLike }) {
   };
 
   return (
-    <Modal title={post.title} onClose={onClose}>
+    <Modal title={translateText(post.title, language)} onClose={onClose}>
       <div className="post-author modal-author">
         <div className="avatar small">{post.author[0]}</div>
         <div>
           <strong>{post.author}</strong>
           <span>
-            {post.badge} · {post.createdAt}
+            {translateText(post.badge, language)} · {translateRelativeTime(post.createdAt, language)}
           </span>
         </div>
       </div>
-      <p className="modal-copy">{post.body}</p>
+      <p className="modal-copy">{translateText(post.body, language)}</p>
       <div className="detail-actions">
         <button type="button" onClick={() => onToggleLike(post.id)}>
-          {post.isLiked ? "Disukai" : "Like"} · {post.likes}
+          {translateText(post.isLiked ? "Disukai" : "Like", language)} · {post.likes}
         </button>
-        <span>{post.comments.length} komentar</span>
+        <span>{translateCommunityMetric(post.comments.length, "komentar", "comments", language)}</span>
       </div>
 
       <section className="comment-section">
-        <h3>Komentar</h3>
-        <CommentList comments={post.comments} onReply={setReplyTo} />
+        <h3>{translateText("Komentar", language)}</h3>
+        <CommentList comments={post.comments} language={language} onReply={setReplyTo} />
         <form className="comment-form" onSubmit={handleSubmit}>
           {replyTo && (
             <button className="reply-context" type="button" onClick={() => setReplyTo(null)}>
-              Batalkan balasan
+              {translateText("Batalkan balasan", language)}
             </button>
           )}
           <textarea
-            placeholder={replyTo ? "Tulis balasan..." : "Tulis komentar..."}
+            placeholder={translateText(replyTo ? "Tulis balasan..." : "Tulis komentar...", language)}
             value={commentBody}
             onChange={(event) => setCommentBody(event.target.value)}
             rows="3"
           />
           <button className="primary-action" type="submit">
-            Kirim
+            {translateText("Kirim", language)}
           </button>
         </form>
       </section>
@@ -1785,9 +1855,9 @@ function PostDetailModal({ post, onAddComment, onClose, onToggleLike }) {
   );
 }
 
-function CommentList({ comments, onReply }) {
+function CommentList({ comments, language = "id", onReply }) {
   if (!comments.length) {
-    return <p className="empty-copy">Belum ada komentar.</p>;
+    return <p className="empty-copy">{translateText("Belum ada komentar.", language)}</p>;
   }
 
   return (
@@ -1796,11 +1866,11 @@ function CommentList({ comments, onReply }) {
         <article className="comment-item" key={comment.id}>
           <div>
             <strong>{comment.author}</strong>
-            <span>{comment.createdAt}</span>
+            <span>{translateRelativeTime(comment.createdAt, language)}</span>
           </div>
-          <p>{comment.body}</p>
+          <p>{translateText(comment.body, language)}</p>
           <button type="button" onClick={() => onReply(comment.id)}>
-            Balas
+            {translateText("Balas", language)}
           </button>
           {(comment.replies || []).length > 0 && (
             <div className="reply-list">
@@ -1808,9 +1878,9 @@ function CommentList({ comments, onReply }) {
                 <article className="comment-item" key={reply.id}>
                   <div>
                     <strong>{reply.author}</strong>
-                    <span>{reply.createdAt}</span>
+                    <span>{translateRelativeTime(reply.createdAt, language)}</span>
                   </div>
-                  <p>{reply.body}</p>
+                  <p>{translateText(reply.body, language)}</p>
                 </article>
               ))}
             </div>
@@ -1849,6 +1919,7 @@ function ProfilePage({
         compact
         user={user}
         isLightTheme={isLightTheme}
+        language={language}
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
@@ -1864,7 +1935,7 @@ function ProfilePage({
         </div>
         <h1>{displayName}</h1>
         <p>{displayEmail}</p>
-        <span className="profile-level">{stats.level_title}</span>
+        <span className="profile-level">{translateText(stats.level_title, language)}</span>
       </section>
 
       <div className="profile-stats">
@@ -1875,9 +1946,9 @@ function ProfilePage({
 
       <section className="section-block">
         <div className="section-title">
-          <h2>Riwayat Scan</h2>
+          <h2>{translateText("Riwayat Scan", language)}</h2>
         </div>
-        <HistoryList items={historyItems} />
+        <HistoryList items={historyItems} language={language} />
       </section>
 
       <section className="settings-list">
@@ -2739,6 +2810,7 @@ function App() {
  historyError={historyError}
  historyItems={historyItems}
  isLightTheme={isLightTheme}
+ language={language}
  notifications={notifications}
  onLogout={handleLogout}
  onNavigate={setActivePage}
@@ -2755,6 +2827,7 @@ function App() {
  error={error}
  isLoading={isLoading}
  isLightTheme={isLightTheme}
+ language={language}
  notifications={notifications}
  onImageChange={handleImageChange}
  onLogout={handleLogout}
@@ -2778,6 +2851,7 @@ function App() {
  challenge={challenge}
  isLightTheme={isLightTheme}
  items={communityItems}
+ language={language}
  leaderboard={leaderboard}
  notifications={notifications}
  onAddComment={handleAddComment}
