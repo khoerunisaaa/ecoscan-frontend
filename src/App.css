@@ -329,6 +329,16 @@ button {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
 }
 
+.app-shell.dark-theme .notification-item.unread {
+  border-color: rgba(44, 205, 121, 0.36);
+  background: rgba(28, 58, 39, 0.95);
+}
+
+.app-shell.dark-theme .notification-item strong,
+.app-shell.dark-theme .notification-item span {
+  color: #f8fff9;
+}
+
 .app-shell.dark-theme .top-actions .avatar-button {
   border: 0;
   background: linear-gradient(135deg, #f5d37b, #18b86f);
@@ -1609,8 +1619,7 @@ gap: 10px;
   gap: 10px;
   min-height: 50px;
   margin-bottom: 14px;
-
-padding: 0 18px;
+  padding: 0 18px;
   border: 1px solid #dce8df;
   border-radius: 999px;
   background: #ffffff;
@@ -1625,6 +1634,24 @@ padding: 0 18px;
   outline: 0;
   background: transparent;
   color: #17201b;
+}
+
+.search-clear {
+  display: inline-grid;
+  flex: 0 0 30px;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #2b5f9e;
+  cursor: pointer;
+}
+
+.search-clear .icon {
+  width: 18px;
+  height: 18px;
 }
 
 .challenge-card {
@@ -2387,12 +2414,48 @@ padding: 0 18px;
 
 .notification-item {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: start;
   padding: 12px;
+  border: 1px solid transparent;
   border-radius: 18px;
   background: #ffffff;
+}
+
+.notification-item.unread {
+  border-color: rgba(10, 155, 89, 0.18);
+  background: #effaf4;
+}
+
+.notification-item strong,
+.notification-item span,
+.notification-item small {
+  display: block;
+}
+
+.notification-item strong {
+  margin-bottom: 4px;
+  color: #17201b;
+  font-size: 0.9rem;
+}
+
+.notification-item span {
+  margin-top: 6px;
+  color: #6b756f;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.notification-item small {
+  align-self: start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #0a9b59;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .notification-item p,
@@ -2735,4 +2798,3 @@ padding: 0 18px;
     gap: 18px;
   }
 }
-

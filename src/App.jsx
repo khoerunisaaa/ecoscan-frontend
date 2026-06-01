@@ -13,10 +13,14 @@ const REGISTER_URL = `${API_BASE_URL}/api/v1/auth/register`;
 const COMMUNITY_CHALLENGE_URL = `${API_BASE_URL}/api/v1/community/challenge`;
 const COMMUNITY_POSTS_URL = `${API_BASE_URL}/api/v1/community/posts`;
 const COMMUNITY_LEADERBOARD_URL = `${API_BASE_URL}/api/v1/community/leaderboard`;
+const COMMUNITY_SEARCH_URL = `${API_BASE_URL}/api/v1/search`;
+const WEEKLY_CHALLENGE_STATUS_URL = `${API_BASE_URL}/api/v1/challenges/weekly/status`;
+const NOTIFICATIONS_URL = `${API_BASE_URL}/api/v1/notifications`;
 const TRIVIA_URL = `${API_BASE_URL}/api/v1/trivia`;
 const USER_URL = `${API_BASE_URL}/api/v1/users`;
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 const HISTORY_PAGE_SIZE = 5;
+const WEEKLY_CHALLENGE_TARGET = 10;
 
 const textTranslations = {
   "Beranda": "Home",
@@ -63,6 +67,9 @@ const textTranslations = {
   "Belum ada postingan yang cocok.": "No matching posts yet.",
   "Tips tidak ditemukan.": "No tips found.",
   "Cari tips, pengguna, atau topik...": "Search tips, users, or topics...",
+  "Sedang mencari...": "Searching...",
+  "Pencarian gagal. Menampilkan hasil lokal.": "Search failed. Showing local results.",
+  "Hapus pencarian": "Clear search",
   "suka": "likes",
   "komentar": "comments",
   "Disukai": "Liked",
@@ -77,6 +84,7 @@ const textTranslations = {
   "Edit Profil": "Edit Profile",
   "Ganti Password": "Change Password",
   "Notifikasi": "Notifications",
+  "Belum dibaca": "Unread",
   "Bahasa": "Language",
   "Bahasa Indonesia": "Indonesian",
   "English": "English",
@@ -390,8 +398,8 @@ const weeklyChallenge = {
   id: "weekly-plastic-10",
   title: "Scan 10 sampah plastik",
   description: "Kumpulkan scan plastik bersih minggu ini dan bagikan tips pemilahanmu.",
-  current: 6,
-  target: 10,
+  current: 0,
+  target: WEEKLY_CHALLENGE_TARGET,
   reward: 80,
   endsAt: "Minggu ini",
 };
@@ -522,6 +530,33 @@ function normalizePost(item) {
   };
 }
 
+function normalizeSearchItems(data) {
+  const groups = [];
+
+  if (Array.isArray(data)) groups.push([data]);
+  if (Array.isArray(data?.items)) groups.push([data.items]);
+  if (Array.isArray(data?.results)) groups.push([data.results]);
+  if (Array.isArray(data?.feed)) groups.push([data.feed, "post"]);
+  if (Array.isArray(data?.feeds)) groups.push([data.feeds, "post"]);
+  if (Array.isArray(data?.posts)) groups.push([data.posts, "post"]);
+  if (Array.isArray(data?.tips)) groups.push([data.tips, "tip"]);
+
+  const seen = new Set();
+  const items = [];
+
+  groups.forEach(([group, forcedType]) => {
+    group.forEach((item) => {
+      if (!item || typeof item !== "object") return;
+      const normalized = normalizePost(forcedType && !item.type ? { ...item, type: forcedType } : item);
+      if (seen.has(normalized.id)) return;
+      seen.add(normalized.id);
+      items.push(normalized);
+    });
+  });
+
+  return items;
+}
+
 function normalizeChallenge(item) {
   if (!item) {
     return weeklyChallenge;
@@ -532,10 +567,43 @@ function normalizeChallenge(item) {
     title: item.title || weeklyChallenge.title,
     description: item.description || weeklyChallenge.description,
     current: Number(item.current || item.current_progress || 0),
-    target: Number(item.target || item.target_progress || weeklyChallenge.target),
+    target: Number(item.target || item.target_progress || WEEKLY_CHALLENGE_TARGET),
     reward: Number(item.reward || item.reward_points || weeklyChallenge.reward),
     endsAt: item.endsAt || item.ends_at || weeklyChallenge.endsAt,
   };
+}
+
+function normalizeWeeklyChallengeStatus(data) {
+  const source = data?.status || data?.challenge || data || {};
+  const totalScan = Number(source.total_scan ?? source.totalScan ?? source.total_scans ?? source.scans_this_week ?? 0);
+
+  return {
+    totalScan: Number.isFinite(totalScan) ? totalScan : 0,
+  };
+}
+
+function normalizeNotification(item, index = 0) {
+  const createdAt = item.createdAt || item.created_at || item.timestamp || item.time || "Baru saja";
+
+  return {
+    id: item.id || item.notification_id || `${createdAt}-${index}`,
+    title: item.title || item.type || "Notifikasi",
+    message: item.message || item.body || item.text || item.content || "",
+    createdAt,
+    read: Boolean(item.read || item.is_read || item.read_at),
+  };
+}
+
+function sortNotificationsByNewest(items) {
+  return [...items].sort((first, second) => {
+    const firstTime = new Date(first.createdAt).getTime();
+    const secondTime = new Date(second.createdAt).getTime();
+
+    if (Number.isNaN(firstTime) && Number.isNaN(secondTime)) return 0;
+    if (Number.isNaN(firstTime)) return 1;
+    if (Number.isNaN(secondTime)) return -1;
+    return secondTime - firstTime;
+  });
 }
 
 function normalizeTrivia(item) {
@@ -711,6 +779,28 @@ function ToastStack({ items }) {
   );
 }
 
+function NotificationList({ items, language = "id" }) {
+  if (!items.length) {
+    return <div className="status-card empty-card">{translateText("Belum ada notifikasi.", language)}</div>;
+  }
+
+  return (
+    <div className="notification-list">
+      {items.map((item) => (
+        <article className={`notification-item ${item.read ? "" : "unread"}`} key={item.id}>
+          <Icon name="bell" />
+          <div>
+            <strong>{translateText(item.title, language)}</strong>
+            <p>{translateText(item.message, language)}</p>
+            <span>{translateRelativeTime(item.createdAt, language)}</span>
+          </div>
+          {!item.read && <small>{translateText("Belum dibaca", language)}</small>}
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function BottomNavigation({ activePage, onNavigate }) {
   return (
     <nav className="bottom-nav" aria-label="Navigasi utama">
@@ -741,6 +831,7 @@ function TopBar({
   notifications = [],
   onNavigate = null,
   onLogout = null,
+  onNotificationsClose = null,
   onThemeToggle = null,
 }) {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -749,6 +840,11 @@ function TopBar({
   const handleAccountClick = (page) => {
     setIsAccountMenuOpen(false);
     onNavigate?.(page);
+  };
+
+  const handleCloseNotifications = () => {
+    setIsNotificationOpen(false);
+    onNotificationsClose?.();
   };
 
   return (
@@ -797,19 +893,8 @@ function TopBar({
         </div>
       </div>
       {isNotificationOpen && (
-        <Modal title={translateText("Notifikasi", language)} onClose={() => setIsNotificationOpen(false)}>
-          {notifications.length > 0 ? (
-            <div className="notification-list">
-              {notifications.map((item) => (
-                <article className="notification-item" key={item}>
-                  <Icon name="bell" />
-                  <p>{translateText(item, language)}</p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="status-card empty-card">{translateText("Belum ada notifikasi.", language)}</div>
-          )}
+        <Modal title={translateText("Notifikasi", language)} onClose={handleCloseNotifications}>
+          <NotificationList items={notifications} language={language} />
         </Modal>
       )}
     </header>
@@ -1202,7 +1287,7 @@ function LoginPage({ isLightTheme, onAuthenticate, onThemeToggle }) {
 
 
 
-function HomePage({ isLightTheme, language, notifications, onLogout, onNavigate, onThemeToggle, stats, triviaItems, user }) {
+function HomePage({ isLightTheme, language, notifications, onLogout, onNavigate, onNotificationsClose, onThemeToggle, stats, triviaItems, user }) {
   const firstName = user?.name?.split(" ")[0] || "Eco Warrior";
   const [selectedTrivia, setSelectedTrivia] = useState(null);
   const selectedTriviaTitle = selectedTrivia ? translateText(selectedTrivia.title, language) : "";
@@ -1219,6 +1304,7 @@ function HomePage({ isLightTheme, language, notifications, onLogout, onNavigate,
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        onNotificationsClose={onNotificationsClose}
         onThemeToggle={onThemeToggle}
       />
 
@@ -1316,7 +1402,7 @@ function HomePage({ isLightTheme, language, notifications, onLogout, onNavigate,
 
 
 
-function HistoryPage({ historyError, historyItems, isLightTheme, language, notifications, onLogout, onNavigate, onRefresh, onThemeToggle, user }) {
+function HistoryPage({ historyError, historyItems, isLightTheme, language, notifications, onLogout, onNavigate, onNotificationsClose, onRefresh, onThemeToggle, user }) {
   return (
     <section className="page-content">
       <TopBar
@@ -1328,6 +1414,7 @@ function HistoryPage({ historyError, historyItems, isLightTheme, language, notif
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        onNotificationsClose={onNotificationsClose}
         onThemeToggle={onThemeToggle}
       />
       {historyError && (
@@ -1410,6 +1497,7 @@ function ScanPage({
   notifications,
   onLogout,
   onNavigate,
+  onNotificationsClose,
   onThemeToggle,
   prediction,
   predictionTone,
@@ -1447,6 +1535,7 @@ function ScanPage({
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        onNotificationsClose={onNotificationsClose}
         onThemeToggle={onThemeToggle}
       />
 
@@ -1580,18 +1669,25 @@ function ScanPage({
 
 
 
-function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, notifications, onAddComment, onCreatePost, onLogout, onNavigate, onThemeToggle, onToggleLike, user }) {
+function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, notifications, onAddComment, onCreatePost, onLogout, onNavigate, onNotificationsClose, onThemeToggle, onToggleLike, user }) {
   const [activeTab, setActiveTab] = useState("feed");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const [selectedPost, setSelectedPost] = useState(null);
-  const selectedPostData = selectedPost ? items.find((item) => item.id === selectedPost.id) || selectedPost : null;
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const filteredItems = items.filter((item) => {
+  const normalizedSearch = debouncedSearchTerm.trim().toLowerCase();
+  const visibleSearchItems = searchError && normalizedSearch ? items : searchResults;
+  const sourceItems = normalizedSearch ? visibleSearchItems : items;
+  const selectedPostData = selectedPost ? sourceItems.find((item) => item.id === selectedPost.id) || items.find((item) => item.id === selectedPost.id) || selectedPost : null;
+  const locallyFilteredItems = sourceItems.filter((item) => {
     if (!normalizedSearch) return true;
     return [item.title, item.body, item.author, item.tag, item.badge]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(normalizedSearch));
   });
+  const filteredItems = normalizedSearch && !searchError ? sourceItems : locallyFilteredItems;
   const feedItems = filteredItems.filter((item) => item.type !== "tip");
   const tipItems = filteredItems.filter((item) => item.type === "tip");
   const filteredLeaderboard = leaderboard.filter((item) => {
@@ -1600,6 +1696,73 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
       .filter((value) => value !== undefined && value !== null)
       .some((value) => String(value).toLowerCase().includes(normalizedSearch));
   });
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (!debouncedSearchTerm) {
+      setSearchResults([]);
+      setSearchError("");
+      setIsSearching(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const search = async () => {
+      setIsSearching(true);
+      setSearchError("");
+
+      try {
+        const url = new URL(COMMUNITY_SEARCH_URL);
+        url.searchParams.set("q", debouncedSearchTerm);
+        const response = await fetch(url, { signal: controller.signal });
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(data?.detail || "Pencarian gagal.");
+        }
+
+        setSearchResults(normalizeSearchItems(data));
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+        setSearchResults([]);
+        setSearchError("Pencarian gagal. Menampilkan hasil lokal.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
+      }
+    };
+
+    search();
+
+    return () => controller.abort();
+  }, [debouncedSearchTerm]);
+
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setSearchResults([]);
+    setSearchError("");
+    setIsSearching(false);
+  };
+
+  const handleTogglePostLike = (postId) => {
+    setSearchResults((results) =>
+      results.map((item) =>
+        item.id === postId
+          ? { ...item, isLiked: !item.isLiked, likes: Math.max(0, item.likes + (item.isLiked ? -1 : 1)) }
+          : item
+      )
+    );
+    onToggleLike(postId);
+  };
 
   return (
     <section className="page-content">
@@ -1612,6 +1775,7 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        onNotificationsClose={onNotificationsClose}
         onThemeToggle={onThemeToggle}
       />
 
@@ -1623,6 +1787,16 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
+        {searchTerm && (
+          <button
+            aria-label={translateText("Hapus pencarian", language)}
+            className="search-clear"
+            type="button"
+            onClick={handleClearSearch}
+          >
+            <Icon name="x" />
+          </button>
+        )}
       </label>
 
       <div className="tabs">
@@ -1649,6 +1823,9 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
         </button>
       </div>
 
+      {isSearching && <div className="status-card">{translateText("Sedang mencari...", language)}</div>}
+      {searchError && normalizedSearch && <div className="status-card error-card">{translateText(searchError, language)}</div>}
+
       {activeTab === "feed" && (
         <CommunityFeed
           challenge={challenge}
@@ -1656,11 +1833,11 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
           language={language}
           onCreatePost={onCreatePost}
           onOpenPost={setSelectedPost}
-          onToggleLike={onToggleLike}
+          onToggleLike={handleTogglePostLike}
         />
       )}
       {activeTab === "tips" && (
-        <CommunityTips items={tipItems} language={language} onOpenPost={setSelectedPost} onToggleLike={onToggleLike} />
+        <CommunityTips items={tipItems} language={language} onOpenPost={setSelectedPost} onToggleLike={handleTogglePostLike} />
       )}
       {activeTab === "leaderboard" && <CommunityLeaderboard items={filteredLeaderboard} language={language} />}
 
@@ -1669,7 +1846,7 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
           language={language}
           onAddComment={onAddComment}
           onClose={() => setSelectedPost(null)}
-          onToggleLike={onToggleLike}
+          onToggleLike={handleTogglePostLike}
           post={selectedPostData}
         />
       )}
@@ -1902,6 +2079,7 @@ function ProfilePage({
   onLanguageChange,
   onLogout,
   onNavigate,
+  onNotificationsClose,
   onPhotoUpdate,
   onThemeToggle,
   onUpdateUser,
@@ -1911,6 +2089,12 @@ function ProfilePage({
   const displayName = user?.name || "Eco Warrior";
   const displayEmail = user?.email || "user@ecoscan.local";
   const [activePanel, setActivePanel] = useState(null);
+  const unreadNotificationCount = notifications.filter((item) => !item.read).length;
+
+  const handleCloseNotifications = () => {
+    setActivePanel(null);
+    onNotificationsClose?.();
+  };
 
   return (
     <section className="page-content profile-page">
@@ -1923,6 +2107,7 @@ function ProfilePage({
         notifications={notifications}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        onNotificationsClose={onNotificationsClose}
         onThemeToggle={onThemeToggle}
       />
 
@@ -1962,7 +2147,7 @@ function ProfilePage({
         </button>
         <button type="button" onClick={() => setActivePanel("notifications")}>
           <span>{translateText("Notifikasi", language)}</span>
-          <strong>{notifications.length}</strong>
+          <strong>{unreadNotificationCount}</strong>
         </button>
         <button type="button" onClick={() => setActivePanel("language")}>
           <span>{language === "en" ? "English" : "Bahasa Indonesia"}</span>
@@ -2010,19 +2195,8 @@ function ProfilePage({
         />
       )}
       {activePanel === "notifications" && (
-        <Modal title={translateText("Notifikasi", language)} onClose={() => setActivePanel(null)}>
-          {notifications.length > 0 ? (
-            <div className="notification-list">
-              {notifications.map((item) => (
-                <article className="notification-item" key={item}>
-                  <Icon name="bell" />
-                  <p>{translateText(item, language)}</p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="status-card empty-card">{translateText("Belum ada notifikasi.", language)}</div>
-          )}
+        <Modal title={translateText("Notifikasi", language)} onClose={handleCloseNotifications}>
+          <NotificationList items={notifications} language={language} />
         </Modal>
       )}
       {activePanel === "language" && (
@@ -2263,11 +2437,7 @@ function App() {
  ]);
  const [leaderboard, setLeaderboard] = useState(leaderboardItems);
  const [triviaItems, setTriviaItems] = useState(triviaCards);
- const [notifications, setNotifications] = useState([
- "Nadia membalas komentar kamu di Tips memilah sampah dapur.",
- "Tantangan mingguan sudah 60% selesai.",
- "Kamu mendapat 20 poin dari scan terbaru.",
- ]);
+ const [notifications, setNotifications] = useState([]);
  const [language, setLanguage] = useState(() => localStorage.getItem("ecoscan_language") || "id");
  const [isLightTheme, setIsLightTheme] = useState(() => {
  return localStorage.getItem("ecoscan_theme") !== "dark";
@@ -2373,6 +2543,84 @@ function App() {
  }
  };
 
+ const loadNotifications = async () => {
+ if (!currentUser?.id) {
+ setNotifications([]);
+ return;
+ }
+
+ try {
+ const url = new URL(NOTIFICATIONS_URL);
+ url.searchParams.set("user_id", currentUser.id);
+ const response = await fetch(url);
+ const data = await response.json().catch(() => null);
+
+ if (!response.ok) {
+ throw new Error(data?.detail || "Notifikasi belum bisa dimuat.");
+ }
+
+ const sourceItems = Array.isArray(data?.items)
+ ? data.items
+ : Array.isArray(data?.notifications)
+ ? data.notifications
+ : Array.isArray(data)
+ ? data
+ : [];
+ setNotifications(sortNotificationsByNewest(sourceItems.map(normalizeNotification)));
+ } catch {
+ setNotifications([]);
+ }
+ };
+
+ const handleMarkNotificationsRead = async () => {
+ if (!currentUser?.id) return;
+
+ const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id);
+ if (!unreadIds.length) return;
+
+ setNotifications((items) => items.map((item) => (unreadIds.includes(item.id) ? { ...item, read: true } : item)));
+
+ try {
+ await fetch(`${NOTIFICATIONS_URL}/read`, {
+ method: "PATCH",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({
+ user_id: currentUser.id,
+ notification_ids: unreadIds,
+ }),
+ });
+ } catch {
+ // Optimistic update tetap dipakai; data terbaru akan diambil ulang saat halaman dimuat.
+ }
+ };
+
+ const loadWeeklyChallengeStatus = async () => {
+ if (!currentUser?.id) {
+ setChallenge((item) => ({ ...normalizeChallenge(item), current: 0, target: WEEKLY_CHALLENGE_TARGET }));
+ return;
+ }
+
+ try {
+ const url = new URL(WEEKLY_CHALLENGE_STATUS_URL);
+ url.searchParams.set("user_id", currentUser.id);
+ const response = await fetch(url);
+ const data = await response.json().catch(() => null);
+
+ if (!response.ok) {
+ throw new Error(data?.detail || "Status tantangan mingguan belum bisa dimuat.");
+ }
+
+ const status = normalizeWeeklyChallengeStatus(data);
+ setChallenge((item) => ({
+ ...normalizeChallenge(item),
+ current: status.totalScan,
+ target: WEEKLY_CHALLENGE_TARGET,
+ }));
+ } catch {
+ setChallenge((item) => ({ ...normalizeChallenge(item), target: WEEKLY_CHALLENGE_TARGET }));
+ }
+ };
+
  const loadCommunityData = async () => {
  try {
  const [challengeResponse, postsResponse, leaderboardResponse] = await Promise.all([
@@ -2385,6 +2633,8 @@ function App() {
  const data = await challengeResponse.json();
  setChallenge(normalizeChallenge(data.challenge));
  }
+
+ await loadWeeklyChallengeStatus();
 
  if (postsResponse.ok) {
  const data = await postsResponse.json();
@@ -2402,6 +2652,7 @@ function App() {
  }
  } catch {
  setCommunityItems((items) => (items.length ? items : [...communityPosts, ...communityTips].map(normalizePost)));
+ await loadWeeklyChallengeStatus();
  }
  };
 
@@ -2422,6 +2673,7 @@ function App() {
  if (isAuthenticated) {
  loadHistory();
  loadUserStats();
+ loadNotifications();
  loadCommunityData();
  loadTrivia();
  }
@@ -2510,6 +2762,7 @@ function App() {
  setPrediction(data);
  await loadHistory();
  await loadUserStats();
+ await loadWeeklyChallengeStatus();
  notify("Scan berhasil disimpan ke riwayat.", "success");
  } catch (err) {
  const message =
@@ -2808,6 +3061,7 @@ function App() {
  notifications={notifications}
  onLogout={handleLogout}
  onNavigate={setActivePage}
+ onNotificationsClose={handleMarkNotificationsRead}
  onThemeToggle={handleThemeToggle}
  stats={userStats}
  triviaItems={triviaItems}
@@ -2823,6 +3077,7 @@ function App() {
  notifications={notifications}
  onLogout={handleLogout}
  onNavigate={setActivePage}
+ onNotificationsClose={handleMarkNotificationsRead}
  onRefresh={() => loadHistory(true)}
  onThemeToggle={handleThemeToggle}
  user={currentUser}
@@ -2841,6 +3096,7 @@ function App() {
  onImageChange={handleImageChange}
  onLogout={handleLogout}
  onNavigate={setActivePage}
+ onNotificationsClose={handleMarkNotificationsRead}
  onPrimaryScan={handlePrimaryScan}
  onReset={resetScan}
  onSwitchCamera={handleSwitchCamera}
@@ -2867,6 +3123,7 @@ function App() {
  onCreatePost={handleCreatePost}
  onLogout={handleLogout}
  onNavigate={setActivePage}
+ onNotificationsClose={handleMarkNotificationsRead}
  onThemeToggle={handleThemeToggle}
  onToggleLike={handleToggleLike}
  user={currentUser}
@@ -2882,6 +3139,7 @@ function App() {
  onLanguageChange={handleLanguageChange}
  onLogout={handleLogout}
  onNavigate={setActivePage}
+ onNotificationsClose={handleMarkNotificationsRead}
  onPhotoUpdate={handlePhotoUpdate}
  onThemeToggle={handleThemeToggle}
  onUpdateUser={handleUpdateUser}
