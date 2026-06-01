@@ -113,9 +113,11 @@ const textTranslations = {
   "Kirim laporan ke support@ecoscan.my.id dengan screenshot masalah yang kamu temui.": "Send a report to support@ecoscan.my.id with a screenshot of the issue.",
   "Fakta Daur Ulang": "Recycling Facts",
   "Botol plastik PET sebaiknya dicuci, dikeringkan, lalu disetor ke bank sampah.": "PET plastic bottles should be washed, dried, then sent to a waste bank.",
+  "Botol PET yang bersih lebih mudah diterima bank sampah karena tidak mencemari material lain.": "Clean PET bottles are easier for waste banks to accept because they do not contaminate other materials.",
   "Botol PET yang bersih lebih mudah diterima bank sampah karena tidak mencemari material lain. Lepaskan label bila memungkinkan, pipihkan botol untuk menghemat ruang, lalu kumpulkan berdasarkan jenis plastik.": "Clean PET bottles are easier for waste banks to accept because they do not contaminate other materials. Remove labels when possible, flatten bottles to save space, then sort by plastic type.",
   "Sampah Organik": "Organic Waste",
   "Sisa sayur dan buah bisa diolah menjadi kompos untuk mengurangi sampah rumah.": "Vegetable and fruit scraps can be composted to reduce household waste.",
+  "Sampah organik seperti kulit buah, sisa sayur, ampas kopi, dan daun kering bisa masuk komposter.": "Organic waste such as fruit peels, vegetable scraps, coffee grounds, and dry leaves can go into a composter.",
   "Sampah organik seperti kulit buah, sisa sayur, ampas kopi, dan daun kering bisa masuk komposter. Hindari minyak berlebih dan daging mentah agar kompos tidak berbau tajam.": "Organic waste such as fruit peels, vegetable scraps, coffee grounds, and dry leaves can go into a composter. Avoid excess oil and raw meat so the compost does not smell strong.",
   "Pisahkan dari sumber": "Sort from the Source",
   "Gunakan wadah berbeda untuk organik, anorganik, B3, kertas, dan residu.": "Use different containers for organic, inorganic, hazardous, paper, and residual waste.",
@@ -1137,9 +1139,11 @@ function LoginPage({ isLightTheme, onAuthenticate, onThemeToggle }) {
 
 
 
-function HomePage({ isLightTheme, notifications, onLogout, onNavigate, onThemeToggle, stats, triviaItems, user }) {
+function HomePage({ isLightTheme, language, notifications, onLogout, onNavigate, onThemeToggle, stats, triviaItems, user }) {
   const firstName = user?.name?.split(" ")[0] || "Eco Warrior";
   const [selectedTrivia, setSelectedTrivia] = useState(null);
+  const selectedTriviaTitle = selectedTrivia ? translateText(selectedTrivia.title, language) : "";
+  const selectedTriviaDetails = selectedTrivia ? translateText(selectedTrivia.details, language) : "";
 
   return (
     <section className="page-content">
@@ -1237,9 +1241,9 @@ function HomePage({ isLightTheme, notifications, onLogout, onNavigate, onThemeTo
       </section>
 
       {selectedTrivia && (
-        <Modal title={selectedTrivia.title} onClose={() => setSelectedTrivia(null)}>
+        <Modal title={selectedTriviaTitle} onClose={() => setSelectedTrivia(null)}>
           <img className="modal-media" src={selectedTrivia.thumbnail} alt={selectedTrivia.alt} />
-          <p className="modal-copy">{selectedTrivia.details}</p>
+          <p className="modal-copy">{selectedTriviaDetails}</p>
         </Modal>
       )}
     </section>
@@ -2720,6 +2724,7 @@ function App() {
  {activePage === "home" && (
  <HomePage
  isLightTheme={isLightTheme}
+ language={language}
  notifications={notifications}
  onLogout={handleLogout}
  onNavigate={setActivePage}
