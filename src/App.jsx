@@ -1834,7 +1834,6 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
           onCreatePost={onCreatePost}
           onOpenPost={setSelectedPost}
           onToggleLike={handleTogglePostLike}
-          user={user}
         />
       )}
       {activeTab === "tips" && (
@@ -1855,10 +1854,10 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
   );
 }
 
-function CommunityFeed({ items, language = "id", onCreatePost, onOpenPost, onToggleLike, user }) {
+function CommunityFeed({ items, language = "id", onCreatePost, onOpenPost, onToggleLike }) {
   return (
     <>
-      <WeeklyChallengeStreak userId={user?.id} />
+      <WeeklyChallengeStreak />
 
       <CreatePostForm language={language} onCreatePost={onCreatePost} />
 

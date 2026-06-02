@@ -3,15 +3,6 @@ import { AlertTriangle, CheckCircle2, Flame, LoaderCircle, Plus, RotateCw, Troph
 
 const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
-function getStoredUserId() {
-  try {
-    const storedUser = JSON.parse(localStorage.getItem("ecoscan_user") || "null");
-    return storedUser?.id || storedUser?.user_id || "";
-  } catch {
-    return "";
-  }
-}
-
 function extractChallengeItems(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.items)) return data.items;
@@ -50,12 +41,8 @@ function getUpdatedChallenge(data) {
   return normalizeChallenge(source);
 }
 
-export default function WeeklyChallengeStreak({
-  apiBaseUrl = DEFAULT_API_BASE_URL,
-  progressIncrement = 1,
-  userId,
-}) {
-  const resolvedUserId = userId || getStoredUserId();
+export default function WeeklyChallengeStreak({ apiBaseUrl = DEFAULT_API_BASE_URL }) {
+  const userId = "1";
   const [streak, setStreak] = useState(0);
   const [challenges, setChallenges] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,29 +51,24 @@ export default function WeeklyChallengeStreak({
 
   const endpoints = useMemo(
     () => ({
-      streak: `${apiBaseUrl}/api/v1/users/${resolvedUserId}/streak`,
+      streak: `${apiBaseUrl}/api/v1/users/${userId}/streak`,
+      challenges: `${apiBaseUrl}/api/v1/challenges/weekly?user_id=${encodeURIComponent(userId)}`,
       progress: `${apiBaseUrl}/api/v1/challenges/weekly/progress`,
     }),
-    [apiBaseUrl, resolvedUserId]
+    [apiBaseUrl, userId]
   );
 
   useEffect(() => {
     const controller = new AbortController();
 
     async function fetchWeeklyChallengeData() {
-      if (!resolvedUserId) {
-        setIsLoading(false);
-        setError("User ID tidak ditemukan. Silakan login ulang untuk melihat streak dan tantangan.");
-        return;
-      }
-
       setIsLoading(true);
       setError(null);
 
       try {
         const [streakResponse, challengesResponse] = await Promise.all([
           fetch(endpoints.streak, { signal: controller.signal }),
-          fetch(endpoints.progress, { signal: controller.signal }),
+          fetch(endpoints.challenges, { signal: controller.signal }),
         ]);
 
         const [streakData, challengesData] = await Promise.all([
@@ -117,7 +99,7 @@ export default function WeeklyChallengeStreak({
     fetchWeeklyChallengeData();
 
     return () => controller.abort();
-  }, [endpoints.progress, endpoints.streak, resolvedUserId]);
+  }, [endpoints.challenges, endpoints.streak]);
 
   const handleUpdateProgress = async (challengeId) => {
     setUpdatingChallengeId(challengeId);
@@ -125,20 +107,19 @@ export default function WeeklyChallengeStreak({
 
     try {
       const response = await fetch(endpoints.progress, {
-        method: "PATCH",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          challenge_id: challengeId,
-          user_id: resolvedUserId,
-          increment: progressIncrement,
+          user_id: userId,
+          increment: 1,
         }),
       });
 
       const data = await response.json().catch(() => null);
 
-      if (response.status !== 200) {
+      if (!response.ok) {
         throw new Error(data?.detail || "Progress challenge gagal diperbarui.");
       }
 
@@ -152,7 +133,7 @@ export default function WeeklyChallengeStreak({
             return updatedChallenge;
           }
 
-          const nextProgress = Math.min(challenge.target, challenge.progress + progressIncrement);
+          const nextProgress = Math.min(challenge.target, challenge.progress + 1);
 
           return {
             ...challenge,
@@ -236,7 +217,7 @@ export default function WeeklyChallengeStreak({
                   {challenge.progress}/{challenge.target} poin
                 </span>
                 <button
-                  aria-label={`Tambah progress untuk ${challenge.title}`}
+                  aria-label={`Kerjakan ${challenge.title}`}
                   disabled={challenge.isCompleted || isUpdating}
                   style={{
                     ...styles.updateButton,
@@ -246,7 +227,7 @@ export default function WeeklyChallengeStreak({
                   onClick={() => handleUpdateProgress(challenge.id)}
                 >
                   {isUpdating ? <LoaderCircle className="icon" style={styles.spinIcon} /> : <Plus className="icon" />}
-                  <span>{isUpdating ? "Update" : "Tambah"}</span>
+                  <span>{isUpdating ? "Update" : "Kerjakan"}</span>
                 </button>
               </div>
             </article>
