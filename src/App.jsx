@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, SwitchCamera } from "lucide-react";
 
 import "./App.css";
+import WeeklyChallengeStreak from "./components/WeeklyChallengeStreak.jsx";
 
 
 
@@ -1828,12 +1829,12 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
 
       {activeTab === "feed" && (
         <CommunityFeed
-          challenge={challenge}
           items={feedItems}
           language={language}
           onCreatePost={onCreatePost}
           onOpenPost={setSelectedPost}
           onToggleLike={handleTogglePostLike}
+          user={user}
         />
       )}
       {activeTab === "tips" && (
@@ -1854,22 +1855,10 @@ function CommunityPage({ challenge, isLightTheme, items, language, leaderboard, 
   );
 }
 
-function CommunityFeed({ challenge, items, language = "id", onCreatePost, onOpenPost, onToggleLike }) {
-  const progress = challenge.target > 0 ? Math.min(100, Math.round((challenge.current / challenge.target) * 100)) : 0;
-
+function CommunityFeed({ items, language = "id", onCreatePost, onOpenPost, onToggleLike, user }) {
   return (
     <>
-      <section className="challenge-card">
-        <span>{translateText("Tantangan Minggu Ini", language)}</span>
-        <h2>{translateText(challenge.title, language)}</h2>
-        <p>{translateText(challenge.description, language)}</p>
-        <div className="confidence-track">
-          <span style={{ width: `${progress}%` }} />
-        </div>
-        <p>
-          {challenge.current}/{challenge.target} {translateText("selesai", language)} · {challenge.reward} {translateText("poin", language)} · {translateRelativeTime(challenge.endsAt, language)}
-        </p>
-      </section>
+      <WeeklyChallengeStreak userId={user?.id} />
 
       <CreatePostForm language={language} onCreatePost={onCreatePost} />
 
